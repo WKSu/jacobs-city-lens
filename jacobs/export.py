@@ -6,6 +6,9 @@ site/public/data/<city>/hex.geojson       hexagons with all metrics (WGS84)
 site/public/data/<city>/areas.geojson     study area outlines
 site/public/data/<city>/water.geojson     simplified water for the map background
 site/public/data/<city>/figure_ground.json   buildings + streets around each study area (metres)
+site/public/data/<city>/links.geojson     street links with eyes-on-the-street metrics
+site/public/data/<city>/vacuums.geojson   border vacuums by type
+site/public/data/<city>/parks.geojson     parks with the uses around them
 """
 
 from __future__ import annotations
@@ -19,7 +22,15 @@ import pandas as pd
 import shapely
 
 from jacobs.config import ROOT, City, list_cities
-from jacobs.metrics.registry import GENERATORS, METRIC_IDS, METRICS
+from jacobs.metrics.registry import (
+    GENERATORS,
+    HEX_METRICS,
+    LINK_METRIC_IDS,
+    METRIC_IDS,
+    METRICS,
+    PARK_METRIC_IDS,
+)
+from jacobs.metrics.vacuums import LABELS as VACUUM_LABELS
 from jacobs.pipeline import load_raw
 
 SITE_DATA = ROOT / "site" / "public" / "data"
@@ -52,7 +63,7 @@ def area_profiles(hexes: pd.DataFrame, areas: gpd.GeoDataFrame) -> list[dict]:
     for _, a in areas.iterrows():
         sub = hexes[hexes["study_area"] == a["area"]]
         metrics = {}
-        for m in METRICS:
+        for m in HEX_METRICS:
             med = sub[m["id"]].median()
             metrics[m["id"]] = {
                 "median": _round(med),
@@ -131,6 +142,24 @@ def run(city: City) -> None:
 
     (out / "figure_ground.json").write_text(json.dumps(figure_ground(city, areas)))
 
+    links = gpd.read_parquet(city.processed_dir / "eyes_links.parquet")
+    links = links.assign(geometry=links.geometry.simplify(1))
+    for col in LINK_METRIC_IDS:
+        links[col] = links[col].round(3)
+    _write_geojson(links[[*LINK_METRIC_IDS, "geometry"]], out / "links.geojson")
+
+    vac = gpd.read_parquet(city.processed_dir / "vacuums.parquet")
+    vac = vac.assign(geometry=vac.geometry.simplify(5), area_ha=vac["area_ha"].round(1))
+    _write_geojson(vac[["kind", "area_ha", "geometry"]], out / "vacuums.geojson")
+    decay = pd.read_parquet(city.processed_dir / "vacuum_decay.parquet")
+
+    parks = gpd.read_parquet(city.processed_dir / "parks.parquet")
+    parks = parks.assign(geometry=parks.geometry.simplify(2))
+    for col in ["area_ha", "ring_places_per_ha", *PARK_METRIC_IDS]:
+        parks[col] = parks[col].round(3)
+    park_cols = ["name", "study_area", "area_ha", "ring_places_per_ha", *PARK_METRIC_IDS]
+    _write_geojson(parks[[*park_cols, "geometry"]], out / "parks.geojson")
+
     bounds = hexes.to_crs(4326).total_bounds
     meta = {
         "id": city.id, "name": city.name, "country": city.country,
@@ -141,7 +170,18 @@ def run(city: City) -> None:
         "metrics": METRICS,
         "areas": area_profiles(hexes, areas),
         "city_median": {m: _round(hexes[m].median()) for m in METRIC_IDS},
-        "distributions": {m: [_round(v) for v in hexes[m].dropna().sort_values()] for m in METRIC_IDS},
+        "distributions": {
+            **{m: [_round(v) for v in hexes[m].dropna().sort_values()] for m in METRIC_IDS},
+            **{m: [_round(v) for v in parks[m].dropna().sort_values()] for m in PARK_METRIC_IDS},
+        },
+        "link_distributions": {m: [_round(v, 3) for v in links[m].dropna().sort_values()[::5]]
+                               for m in LINK_METRIC_IDS},
+        "vacuums": {
+            "labels": VACUUM_LABELS,
+            "area_ha": {k: _round(v, 0) for k, v in vac.groupby("kind")["area_ha"].sum().items()},
+            "decay": [{k: (_round(v) if isinstance(v, float) else v) for k, v in r.items()}
+                      for r in decay.to_dict("records")],
+        },
     }
     (out / "city.json").write_text(json.dumps(meta))
 

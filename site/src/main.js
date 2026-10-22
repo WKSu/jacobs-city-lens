@@ -2,6 +2,8 @@ import { HexMap } from "./map.js";
 import { renderProfile } from "./profile.js";
 import { renderFigureGround } from "./figureground.js";
 import { renderDensity } from "./density.js";
+import { renderVacuums } from "./vacuums.js";
+import { renderParks } from "./parks.js";
 import { onThemeChange } from "./theme.js";
 
 const base = import.meta.env.BASE_URL;
@@ -16,13 +18,18 @@ async function getJSON(path) {
   return res.json();
 }
 
+const EMPTY = { type: "FeatureCollection", features: [] };
+// Layers a city may not have yet.
+const optional = (path) => getJSON(path).catch(() => EMPTY);
+
 async function loadCity(id) {
-  const [city, hex, areas, water, fg] = await Promise.all([
+  const [city, hex, areas, water, fg, links, vacuums, parks] = await Promise.all([
     getJSON(`${id}/city.json`), getJSON(`${id}/hex.geojson`), getJSON(`${id}/areas.geojson`),
     getJSON(`${id}/water.geojson`), getJSON(`${id}/figure_ground.json`),
+    optional(`${id}/links.geojson`), optional(`${id}/vacuums.geojson`), optional(`${id}/parks.geojson`),
   ]);
   state.city = city;
-  state.data = { hex, areas, water, fg };
+  state.data = { hex, areas, water, fg, links, vacuums, parks };
   await hexMap.load(city, state.data);
   renderTabs();
   renderCharts();
@@ -31,9 +38,13 @@ async function loadCity(id) {
 
 function renderTabs() {
   const { city } = state;
-  $("generator-tabs").innerHTML = city.generators.map((g) =>
+  const tab = (g) =>
     `<button class="tab${g.status ? " pending" : ""}" role="tab" data-g="${g.id}" aria-selected="${g.id === state.generator}">
-      ${g.label}<span class="chapter">ch. ${g.chapter}</span></button>`).join("");
+      ${g.label}<span class="chapter">ch. ${g.chapter}</span></button>`;
+  const generators = city.generators.filter((g) => g.kind !== "chapter");
+  const chapters = city.generators.filter((g) => g.kind === "chapter");
+  $("generator-tabs").innerHTML = generators.map(tab).join("") +
+    (chapters.length ? `<span class="tab-divider" aria-hidden="true"></span>${chapters.map(tab).join("")}` : "");
   $("generator-tabs").querySelectorAll(".tab").forEach((b) =>
     b.addEventListener("click", () => selectGenerator(b.dataset.g)));
   selectGenerator(state.generator);
@@ -73,6 +84,8 @@ function renderCharts() {
   renderProfile($("profile-chart"), $("profile-legend"), $("profile-table"), tooltip, city);
   renderFigureGround($("fg-grid"), city, data.fg);
   renderDensity($("density-chart"), $("density-intro"), tooltip, city);
+  renderVacuums($("vacuum-chart"), $("vacuum-controls"), tooltip, city);
+  renderParks($("park-chart"), $("park-controls"), $("park-legend"), tooltip, city, data.parks);
 }
 
 function renderMethod() {
@@ -84,6 +97,9 @@ function renderMethod() {
     directly from the BAG, the national building and address register.</p>
     <p>Districts are compared by their median hexagon. Percentiles are relative to the rest of the same
     city, so they show contrasts within a city; comparisons between cities use the raw values.</p>
+    <p>Eyes on the street is measured per street (intersection to intersection) and then averaged over
+    each hexagon's street length. Border vacuums are detected from Overture land use, rail and motorway
+    lines, water, and the street network itself; parks are Overture land use parks over 0.5 ha.</p>
     <p>Jacobs' arguments are qualitative. Each indicator here is one interpretation of them, and
     the third generator (aged buildings) waits for BAG construction years. See the project's
     <code>docs/</code> folder for definitions and data sources.</p>`;

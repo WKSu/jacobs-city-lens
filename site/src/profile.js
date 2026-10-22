@@ -5,7 +5,7 @@ import { withUnit } from "./format.js";
 // Dot plot: one row per metric, x = city percentile (oriented so right = more
 // Jacobsian), one dot per study area coloured by role.
 export function renderProfile(el, legendEl, tableEl, tooltip, city) {
-  const metrics = city.metrics;
+  const metrics = city.metrics.filter((m) => (m.layer ?? "hex") === "hex");
   const generators = city.generators.filter((g) => metrics.some((m) => m.generator === g.id));
   const rows = [];
   for (const g of generators) {
