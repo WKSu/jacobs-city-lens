@@ -34,13 +34,9 @@ async function loadCity(id) {
     getJSON(`${id}/clocks.json`).catch(() => ({})),
   ]);
   state.city = city;
-<<<<<<< HEAD
-  state.data = { hex, areas, water, fg, links, vacuums, parks, clocks };
-=======
   state.hex = null;
-  state.data = { hex, areas, water, fg, links, vacuums, parks };
+  state.data = { hex, areas, water, fg, links, vacuums, parks, clocks };
   hexMap.onHexClick = (p) => { state.hex = p; explainHex($("explain"), state.generator, p, city); };
->>>>>>> origin/main
   await hexMap.load(city, state.data);
   loadGround(id);
   renderTabs();
