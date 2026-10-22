@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jacobs City Lens</title>
+    <meta name="description" content="Jane Jacobs' conditions for city diversity, measured with open data." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M8 1l6 3.5v7L8 15l-6-3.5v-7z%22 fill=%22%232a78d6%22/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="wrap">
+        <p class="eyebrow">The Death and Life of Great American Cities, 1961</p>
+        <h1>Jacobs City Lens</h1>
+        <p class="lede">
+          Jane Jacobs named four conditions a city district needs to generate diversity:
+          mixed primary uses, short blocks, buildings of different ages, and enough people.
+          This site measures them with open data, hexagon by hexagon, and compares the old
+          districts she would have recognised with the planned ones she argued against.
+        </p>
+        <label class="city-picker">City <select id="city"></select></label>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <section id="generators" aria-labelledby="h-map">
+        <h2 id="h-map">The four generators of diversity</h2>
+        <div class="tabs" role="tablist" id="generator-tabs"></div>
+        <p class="generator-summary" id="generator-summary"></p>
+        <div class="metric-row" id="metric-buttons" role="radiogroup" aria-label="Metric"></div>
+        <div class="map-panel">
+          <div id="map" aria-label="Map of the selected metric by hexagon"></div>
+          <aside class="map-side">
+            <div id="legend"></div>
+            <p class="metric-description" id="metric-description"></p>
+            <p class="source" id="metric-source"></p>
+          </aside>
+        </div>
+        <div id="tooltip" class="tooltip" role="status" hidden></div>
+      </section>
+
+      <section id="profiles" aria-labelledby="h-profiles">
+        <h2 id="h-profiles">Old districts and planned ones</h2>
+        <p class="section-intro">
+          Each dot is a district's median hexagon, placed by where it falls among all hexagons in the
+          city. Scales are flipped where needed, so further right is always closer to what Jacobs asked
+          for: shorter blocks, more mix, more people.
+        </p>
+        <div class="legend-row" id="profile-legend"></div>
+        <div id="profile-chart"></div>
+        <details class="table-view">
+          <summary>Show as table</summary>
+          <div id="profile-table"></div>
+        </details>
+      </section>
+
+      <section id="figure-ground" aria-labelledby="h-fg">
+        <h2 id="h-fg">Figure-ground: the same 800 × 800 m in each district</h2>
+        <p class="section-intro">
+          Buildings in solid ink, streets as lines. At the same scale, the difference between a
+          fine-grained street grid and towers in open space is visible before any statistics.
+        </p>
+        <div class="fg-grid" id="fg-grid"></div>
+      </section>
+
+      <section id="density" aria-labelledby="h-density">
+        <h2 id="h-density">How dense is dense enough?</h2>
+        <p class="section-intro" id="density-intro"></p>
+        <div id="density-chart"></div>
+      </section>
+
+      <section id="method" aria-labelledby="h-method">
+        <h2 id="h-method">Method and data</h2>
+        <div class="method" id="method-text"></div>
+      </section>
+    </main>
+
+    <footer class="wrap footer">
+      <p>
+        Data: <a href="https://overturemaps.org">Overture Maps Foundation</a> (CDLA-Permissive-2.0;
+        buildings, streets and water © OpenStreetMap contributors, ODbL), addresses from the Dutch
+        <a href="https://www.kadaster.nl/zakelijk/registraties/basisregistraties/bag">BAG</a>.
+        Code on GitHub.
+      </p>
+    </footer>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
