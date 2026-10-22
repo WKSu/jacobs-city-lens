@@ -111,9 +111,9 @@ benefits from a pipeline that has already been tested).
 | Opening hours: time-of-day mix | issue 6 | done, `feat/local-tier-nl` |
 | FSI and the Spacemate chart | issue 4 | FSI and OSR done from BAG floor area; 3DBAG heights still blocked (`data.3dbag.nl` unreachable) |
 | GitHub Pages deploy | issue 11 | done: Pages source switched from legacy to GitHub Actions |
-| Border vacuums | issue 7 | todo |
-| Eyes on the street: frontage and active ground floors | issue 8 | todo |
-| Parks and their surroundings | issue 9 | todo |
+| Border vacuums | issue 7 | done |
+| Eyes on the street: frontage and active ground floors | issue 8 | done |
+| Parks and their surroundings | issue 9 | done |
 | Next cities: New York, Hanoi | issues 12, 13 | todo |
 
 The national registers turned out to be reachable from a local machine even
