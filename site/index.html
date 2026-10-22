@@ -27,14 +27,35 @@
       <section id="generators" aria-labelledby="h-map">
         <h2 id="h-map">The four generators, and what surrounds them</h2>
         <div class="tabs" role="tablist" id="generator-tabs"></div>
-        <p class="generator-summary" id="generator-summary"></p>
+        <div class="story" id="story" role="tabpanel">
+          <div class="story-text">
+            <p class="generator-summary" id="generator-summary"></p>
+            <p class="story-idea" id="story-idea"></p>
+            <figure class="story-scene">
+              <blockquote id="story-scene"></blockquote>
+              <figcaption id="story-scene-source"></figcaption>
+            </figure>
+            <div class="story-city" id="story-city-block">
+              <h3 id="story-city-title"></h3>
+              <p id="story-city"></p>
+              <div class="story-places" id="story-places"></div>
+            </div>
+          </div>
+          <div class="story-model" id="story-model"></div>
+        </div>
+        <div class="story-measure">
+          <h3>How the map measures it</h3>
+          <p id="story-counts"></p>
+        </div>
         <div class="metric-row" id="metric-buttons" role="radiogroup" aria-label="Metric"></div>
         <div class="map-panel">
           <div id="map" aria-label="Map of the selected metric by hexagon"></div>
           <aside class="map-side">
             <div id="legend"></div>
+            <div class="explain" id="explain"></div>
             <p class="metric-description" id="metric-description"></p>
             <p class="source" id="metric-source"></p>
+            <p class="story-honest" id="story-honest"></p>
           </aside>
         </div>
         <div id="tooltip" class="tooltip" role="status" hidden></div>
