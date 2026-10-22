@@ -16,6 +16,13 @@ GENERATORS = [
      "status": "needs BAG construction years (see issue tracker)"},
     {"id": "concentration", "label": "Concentration", "chapter": 11,
      "summary": "A dense enough concentration of people, residents included."},
+    # Later chapters: not generators, but the same map and profile treatment.
+    {"id": "eyes", "label": "Eyes on the street", "chapter": 2, "kind": "chapter",
+     "summary": "Streets lined by buildings that face them, with doors and shops to watch from."},
+    {"id": "border_vacuums", "label": "Border vacuums", "chapter": 14, "kind": "chapter",
+     "summary": "Large single-use areas that leave dead edges around them."},
+    {"id": "parks", "label": "Parks", "chapter": 5, "kind": "chapter",
+     "summary": "A park lives on the mix of uses around it, not on its size."},
 ]
 
 METRICS = [
@@ -61,6 +68,54 @@ METRICS = [
      "direction": "higher", "format": ".0%",
      "description": "Share of land covered by building footprints (GSI).",
      "source": "Overture buildings (OSM)"},
+    {"id": "eyes_score", "generator": "eyes", "label": "Eyes score", "unit": "0–1",
+     "direction": "higher", "format": ".2f", "links": True,
+     "description": "Average of the three street measures below, each as a percentile among the city's "
+                    "streets. A summary for the map, not a finding on its own. Zoom in to see single streets.",
+     "source": "Overture buildings, places and transportation"},
+    {"id": "frontage_share", "generator": "eyes", "label": "Street wall", "unit": "share",
+     "direction": "higher", "format": ".0%", "links": True,
+     "description": "Share of street length, both sides, with a building within 20 m of the street's "
+                    "centre line: how much of the street is lined rather than open to lawns or car parks.",
+     "source": "Overture buildings (OSM) + transportation"},
+    {"id": "buildings_per_100m", "generator": "eyes", "label": "Buildings fronting the street",
+     "unit": "per 100 m", "direction": "higher", "format": ".1f", "links": True,
+     "description": "Distinct buildings facing the street per 100 m, both sides: the grain of doors and "
+                    "windows. A row of narrow houses scores high, one slab in a lawn scores low.",
+     "source": "Overture buildings (OSM) + transportation"},
+    {"id": "places_per_100m", "generator": "eyes", "label": "Places along the street",
+     "unit": "per 100 m", "direction": "higher", "format": ".1f", "links": True,
+     "description": "Open shops, cafés, offices and other places within 30 m of the street, per 100 m.",
+     "source": "Overture places + transportation"},
+    {"id": "vacuum_share", "generator": "border_vacuums", "label": "Land in border vacuums",
+     "unit": "share", "direction": "lower", "format": ".0%",
+     "description": "Share of land inside a large single-use area: rail, motorways, industry and port, "
+                    "campuses and hospitals, large parks, and superblocks over 5 ha between "
+                    "streets. Large water is a vacuum too, but only land is counted here.",
+     "source": "Overture land use, transportation and water"},
+    {"id": "vacuum_dist_m", "generator": "border_vacuums", "label": "Distance to a vacuum edge",
+     "unit": "m", "direction": "higher", "format": ".0f",
+     "description": "Distance from the hexagon's centre to the nearest edge of a border vacuum (0 inside one).",
+     "source": "Overture land use, transportation and water"},
+    {"id": "ring_use_mix", "generator": "parks", "label": "Use mix around the park", "unit": "0–1",
+     "direction": "higher", "format": ".2f", "layer": "parks",
+     "description": "Evenness of open places across six kinds of use within 400 m of the park "
+                    "(same measure as the hexagon use mix). Parks over 0.5 ha.",
+     "source": "Overture land use + places"},
+    {"id": "ring_units_per_ha", "generator": "parks", "label": "Addresses around the park",
+     "unit": "per ha", "direction": "higher", "format": ".0f", "layer": "parks",
+     "description": "Addresses per ha of land within 400 m of the park: the people who could use it.",
+     "source": "Overture land use + addresses (BAG)"},
+    {"id": "edge_built_share", "generator": "parks", "label": "Edge with buildings", "unit": "share",
+     "direction": "higher", "format": ".0%", "layer": "parks",
+     "description": "Share of the park's edge with a building within 40 m outside it: an edge that "
+                    "windows look onto.",
+     "source": "Overture land use + buildings"},
 ]
 
-METRIC_IDS = [m["id"] for m in METRICS]
+# Metrics computed per hexagon (the rest belong to another layer, such as parks).
+HEX_METRICS = [m for m in METRICS if m.get("layer", "hex") == "hex"]
+
+METRIC_IDS = [m["id"] for m in HEX_METRICS]
+LINK_METRIC_IDS = [m["id"] for m in METRICS if m.get("links")]
+PARK_METRIC_IDS = [m["id"] for m in METRICS if m.get("layer") == "parks"]

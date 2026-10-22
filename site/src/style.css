@@ -139,6 +139,14 @@ section { padding: 40px 0 8px; }
 .legend-ticks { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75rem; font-variant-numeric: tabular-nums; margin-top: 2px; }
 .legend-empty { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.75rem; margin-top: 6px; }
 .legend-empty i { width: 12px; height: 12px; border-radius: 3px; background: var(--hex-empty); display: inline-block; }
+.legend-empty i.dashed { background: none; border: 1px dashed var(--text-primary); border-radius: 0; }
+.tab-divider { width: 1px; align-self: stretch; margin: 6px 8px; background: var(--border); }
+
+.sm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.sm-card { margin: 0; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.sm-card figcaption { display: flex; justify-content: space-between; gap: 8px; font-size: 0.85rem; margin-bottom: 4px; }
+.sm-card figcaption span { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sm-card svg { display: block; width: 100%; height: auto; overflow: visible; }
 
 .tooltip {
   position: fixed; pointer-events: none; z-index: 10; background: var(--surface-1); color: var(--text-primary);
@@ -160,7 +168,7 @@ section { padding: 40px 0 8px; }
 .legend-row .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend-row .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 
-#profile-chart svg, #density-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+#profile-chart svg, #density-chart svg, #park-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .axis text { fill: var(--text-muted); font-size: 11px; }
 .axis line, .axis path { stroke: var(--grid); }
 .row-label { fill: var(--text-primary); font-size: 12px; }

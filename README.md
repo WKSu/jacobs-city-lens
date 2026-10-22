@@ -30,7 +30,7 @@ jacobs/sources/overture.py     global tier: buildings, places, streets, addresse
 jacobs/sources/<local>.py      local tier (planned): BAG, 3DBAG, CBS, BGT, PLUTO, ...
         │
 jacobs/grid.py                 H3 hexagons (resolution 9, ~10 ha)
-jacobs/metrics/*.py            one module per Jacobs generator
+jacobs/metrics/*.py            one module per Jacobs generator or chapter (eyes, vacuums, parks)
 jacobs/metrics/registry.py     metric definitions shared with the site
         │
 jacobs/export.py               small GeoJSON/JSON files in site/public/data/<city>/
@@ -40,9 +40,15 @@ site/                          Vite + MapLibre + D3, deployed on GitHub Pages
 
 ## What the site shows
 
-1. **The four generators**: a hexagon map per metric, organised by chapter.
+1. **The four generators, and what surrounds them**: a hexagon map per metric, organised
+   by chapter, plus eyes on the street (single streets when zoomed in), border vacuums
+   and parks.
 2. **Old districts and planned ones**: a profile chart placing each district on
    the city's distribution (further right is closer to what Jacobs asked for).
 3. **Figure-ground**: the same 800 × 800 m of buildings and streets for each district.
 4. **How dense is dense enough?**: the density distribution against Jacobs'
    ~100 dwellings per acre.
+5. **Border vacuums**: activity in 50 m bands from the edges of rail, motorways, industry,
+   campuses, large parks, water and superblocks.
+6. **Parks and the uses around them**: each park's size against the mix, density and
+   built edge of its surroundings.
