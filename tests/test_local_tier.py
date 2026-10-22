@@ -1,5 +1,7 @@
 """Tests for the Dutch local tier: BAG, CBS, BGT and OSM opening hours."""
 
+from types import SimpleNamespace
+
 import geopandas as gpd
 import h3
 import numpy as np
@@ -7,6 +9,7 @@ import pandas as pd
 import pytest
 import shapely
 
+from jacobs import pipeline
 from jacobs.grid import assign_points
 from jacobs.metrics import aged_buildings, car_space, cbs_grid, temporal_mix, use_classes
 from jacobs.metrics.opening_hours import week_mask
@@ -328,6 +331,32 @@ def test_area_clocks_count_places_and_hours():
     assert counts[0, 10] == 2  # Monday mid-morning: both open
     assert counts[6, 10] == 1  # Sunday: only the 24/7 one
     assert counts[0, 3] == 1  # Monday small hours: only the 24/7 one
+
+
+# --- a city without any national register ------------------------------------
+
+def test_local_tier_is_empty_without_local_sources():
+    """A city with only Overture gets no local columns and no error."""
+    city = SimpleNamespace(sources={"overture": {}}, crs=CRS, h3_resolution=RESOLUTION)
+    assert pipeline.local_tier(city, make_grid()) == []
+
+
+def test_export_drops_metrics_a_city_does_not_have():
+    from jacobs.export import available_metrics
+    from jacobs.metrics.registry import GLOBAL_METRIC_IDS
+
+    hexes = pd.DataFrame({m: [1.0] for m in GLOBAL_METRIC_IDS})
+    ids = [m["id"] for m in available_metrics(hexes)]
+    assert set(ids) == set(GLOBAL_METRIC_IDS)
+    assert "bag_use_mix" not in ids
+
+
+def test_export_drops_metrics_that_are_blank_everywhere():
+    from jacobs.export import available_metrics
+
+    hexes = pd.DataFrame({"use_mix": [0.5, 0.6], "bag_use_mix": [np.nan, np.nan]})
+    ids = [m["id"] for m in available_metrics(hexes)]
+    assert ids == ["use_mix"]
 
 
 def test_area_clocks_skip_hexes_outside_a_study_area():
