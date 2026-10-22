@@ -82,15 +82,26 @@ def compute(grid: gpd.GeoDataFrame, places: gpd.GeoDataFrame, resolution: int) -
     return out
 
 
-def area_clocks(places: gpd.GeoDataFrame, hexes: pd.DataFrame, cells: pd.Series) -> dict[str, list]:
-    """Open-place counts by weekday and hour for each study area, for the day clocks."""
+def area_clocks(places: gpd.GeoDataFrame, hexes: pd.DataFrame, cells: pd.Series) -> dict[str, dict]:
+    """Open places by weekday and hour for each study area, for the day clocks.
+
+    Each area also reports how many places it counted, so the site can show the
+    *share* of an area's places that are open in an hour. Areas differ enormously
+    in how many places they have, and the question here is when a district is
+    awake, not how big it is.
+    """
     area_of = hexes.set_index("h3")["study_area"]
     masks, index = masks_for(places)
-    clocks: dict[str, np.ndarray] = {}
+    counts: dict[str, np.ndarray] = {}
+    totals: dict[str, int] = {}
     for offset, idx in enumerate(index):
         area = area_of.get(cells.get(idx))
         if not isinstance(area, str):
             continue
-        clocks.setdefault(area, np.zeros((7, HOURS), dtype=np.int32))
-        clocks[area] += masks[offset]
-    return {area: counts.tolist() for area, counts in clocks.items()}
+        counts.setdefault(area, np.zeros((7, HOURS), dtype=np.int32))
+        counts[area] += masks[offset]
+        totals[area] = totals.get(area, 0) + 1
+    return {
+        area: {"places": totals[area], "counts": grid.tolist()}
+        for area, grid in counts.items()
+    }

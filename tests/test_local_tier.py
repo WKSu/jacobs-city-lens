@@ -7,6 +7,7 @@ import pandas as pd
 import pytest
 import shapely
 
+from jacobs.grid import assign_points
 from jacobs.metrics import aged_buildings, car_space, cbs_grid, temporal_mix, use_classes
 from jacobs.metrics.opening_hours import week_mask
 from jacobs.sources.bag import split_uses
@@ -285,3 +286,25 @@ def test_hours_coverage_reports_unparsed_share():
 def test_blank_when_too_few_readable_places():
     out = temporal_mix.compute(make_grid(), make_places(["24/7"] * 2), RESOLUTION)
     assert np.isnan(out.loc[CELL, "open_hours_share"])
+
+
+def test_area_clocks_count_places_and_hours():
+    places = make_places(["24/7", "Mo-Fr 09:00-18:00", "sunrise-sunset"])
+    hexes = pd.DataFrame({"h3": [CELL], "study_area": ["oude_noorden"]})
+    cells = assign_points(places, RESOLUTION)
+    clocks = temporal_mix.area_clocks(places, hexes, cells)
+    area = clocks["oude_noorden"]
+    # The unreadable one is left out of both the count and the grid.
+    assert area["places"] == 2
+    counts = np.array(area["counts"])
+    assert counts.shape == (7, 24)
+    assert counts[0, 10] == 2  # Monday mid-morning: both open
+    assert counts[6, 10] == 1  # Sunday: only the 24/7 one
+    assert counts[0, 3] == 1  # Monday small hours: only the 24/7 one
+
+
+def test_area_clocks_skip_hexes_outside_a_study_area():
+    places = make_places(["24/7"])
+    hexes = pd.DataFrame({"h3": [CELL], "study_area": [None]})
+    cells = assign_points(places, RESOLUTION)
+    assert temporal_mix.area_clocks(places, hexes, cells) == {}

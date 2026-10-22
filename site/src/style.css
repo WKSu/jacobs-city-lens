@@ -167,6 +167,10 @@ section { padding: 40px 0 8px; }
 .legend-row { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
 .legend-row .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend-row .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.clock-scale { display: inline-flex; gap: 1px; margin: 0 6px; vertical-align: middle; }
+.clock-scale span { width: 10px; height: 10px; }
+.clock-scale span:first-child { border-radius: 2px 0 0 2px; }
+.clock-scale span:last-child { border-radius: 0 2px 2px 0; }
 
 #profile-chart svg, #density-chart svg, #park-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .axis text { fill: var(--text-muted); font-size: 11px; }
