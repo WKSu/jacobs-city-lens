@@ -28,6 +28,7 @@ import pandas as pd
 import shapely
 
 from jacobs.config import ROOT, City, list_cities
+from jacobs.metrics.mixed_use import GROUP_NAMES, clean_places
 from jacobs.metrics.registry import (
     GENERATORS,
     HEX_METRICS,
@@ -36,7 +37,6 @@ from jacobs.metrics.registry import (
     METRICS,
     PARK_METRIC_IDS,
 )
-from jacobs.metrics.mixed_use import GROUP_NAMES, clean_places
 from jacobs.metrics.vacuums import LABELS as VACUUM_LABELS
 from jacobs.pipeline import load_raw
 
