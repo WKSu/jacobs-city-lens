@@ -75,7 +75,7 @@ blocks being turned back toward a Jacobs-like street life by their residents.
 
 * **Pipeline:** Python with `uv`, `geopandas`, `osmnx`, `momepy`, `h3`, `duckdb`
   (to query Overture straight from S3), and `rasterio` (for GHSL). Each city is
-  driven by `config/cities.yaml`, and outputs are GeoParquet files.
+  driven by a file in `config/cities/<city>.yaml`, and outputs are GeoParquet files.
 * **Tiles:** `tippecanoe` to PMTiles, served as static files.
 * **Website:** Observable Framework (or Vite + D3) with MapLibre GL, a
   scrollytelling layout with one section per chapter, a city/neighbourhood switcher

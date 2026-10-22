@@ -11,6 +11,7 @@ export class HexMap {
     this.metric = null;
     this.hovered = null;
     this.markers = [];
+    onThemeChange(() => this.restyle());
   }
 
   async load(city, data) {
@@ -69,7 +70,6 @@ export class HexMap {
 
     this.map.on("mousemove", "hex", (e) => this.hover(e));
     this.map.on("mouseleave", "hex", () => this.clearHover());
-    onThemeChange(() => this.restyle());
     if (this.metric) this.setMetric(this.metric, this.generatorMetrics);
   }
 
