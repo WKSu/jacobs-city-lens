@@ -1,0 +1,52 @@
+# City definition. Everything city-specific lives in a file like this one; the
+# pipeline code is shared by every city.
+id: rotterdam
+name: Rotterdam
+country: NL
+# Metric CRS used for lengths and areas (RD New for the Netherlands).
+crs: EPSG:28992
+h3_resolution: 9
+
+boundary:
+  # Overture division_area for the city of Rotterdam (excludes the port area
+  # towards Maasvlakte, which would swamp every city-wide statistic).
+  overture_division_area: d65bb0a5-cb1b-4e29-bd1d-7fd0328a7e7d
+
+sources:
+  overture:
+    release: 2026-10-21.0
+  # Planned local sources (see docs/data-sources.md): bag, 3dbag, cbs_grid, bgt
+
+# Neighbourhoods compared throughout the site. `match` selects Overture
+# division areas by subtype and name; `role` is how Jacobs would see the area.
+study_areas:
+  oude_noorden:
+    label: Oude Noorden
+    role: jacobs
+    note: 19th-century working-class district, fine grain, mixed ground floors.
+    match: { subtype: neighborhood, name: Oude Noorden }
+  oude_westen:
+    label: Oude Westen
+    role: jacobs
+    note: 19th-century district that residents saved from planned clearance in the 1970s.
+    match: { subtype: microhood, name: Oude Westen }
+  cool:
+    label: Lijnbaan / Cool
+    role: planned
+    note: Rebuilt after 1940; the Lijnbaan (1953) was Europe's first purpose-built pedestrian shopping street.
+    match: { subtype: microhood, name: Cool }
+  ommoord:
+    label: Ommoord
+    role: planned
+    note: 1960s-70s modernist expansion with high-rise slabs in green space.
+    match: { subtype: microhood, name: Ommoord }
+  kop_van_zuid:
+    label: Kop van Zuid
+    role: planned
+    note: 1990s-2010s redevelopment of former docks into a high-rise district.
+    match: { subtype: microhood, name: Kop van Zuid }
+  pendrecht:
+    label: Pendrecht
+    role: planned
+    note: 1950s "neighbourhood unit" garden district, repeated stamps of housing around greens.
+    match: { subtype: microhood, name: Pendrecht }

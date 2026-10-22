@@ -5,3 +5,7 @@ data/processed/*
 __pycache__/
 *.pmtiles
 .ipynb_checkpoints/
+site/node_modules/
+site/dist/
+.pytest_cache/
+.ruff_cache/

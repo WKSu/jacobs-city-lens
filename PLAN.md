@@ -99,6 +99,26 @@ Suggested order: start with **Rotterdam** (BAG has excellent data on use, buildi
 year and units), then **New York** (PLUTO), then **Hanoi** (the hardest data, so it
 benefits from a pipeline that has already been tested).
 
+### Status (Rotterdam first)
+
+| Step | Branch / issue | State |
+|---|---|---|
+| Overture pipeline, H3 grid, short blocks, density, mixed use (global tier) | `feat/overture-pipeline` | done |
+| Website v1: map explorer, district profiles, figure-ground, density chart | `feat/site-v1` | done |
+| BAG: use classes per unit, construction years (generators 1, 3, 4) | issue 01 | blocked: PDOK not reachable from the build environment |
+| 3DBAG floor area (FSI) and Spacemate chart | issue 02 | todo |
+| CBS 100 m grid: population, WOZ value spread | issue 03 | todo |
+| Opening hours: time-of-day mix | issue 04 | todo |
+| Border vacuums | issue 05 | todo |
+| Eyes on the street: frontage and active ground floors | issue 06 | todo |
+| Parks and their surroundings | issue 07 | todo |
+| Car space (BGT) | issue 08 | todo |
+| GitHub Pages deploy + CI | issue 09 | workflow ready |
+| Next cities: New York, Hanoi | issues 10, 11 | todo |
+
+Drafts of the issues are in `docs/issues/`. `scripts/create_issues.sh` files them
+on GitHub.
+
 ## 6. Caveats
 
 * Jacobs' arguments are qualitative. Every indicator here is an interpretation, and
