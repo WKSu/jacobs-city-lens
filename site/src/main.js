@@ -61,7 +61,7 @@ function selectGenerator(id) {
   const metrics = city.metrics.filter((m) => m.generator === id);
   const buttons = $("metric-buttons");
   if (!metrics.length) {
-    buttons.innerHTML = `<p class="pending-note">Not measured yet: ${g.status}.</p>`;
+    buttons.innerHTML = `<p class="pending-note">Not measured yet${g.status ? `: ${g.status}` : ""}.</p>`;
     return;
   }
   buttons.innerHTML = metrics.map((m) =>

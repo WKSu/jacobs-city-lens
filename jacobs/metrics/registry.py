@@ -129,8 +129,9 @@ METRICS = [
      "label": "Hours with something open", "unit": "share of the week", "direction": "higher",
      "format": ".0%",
      "description": "Share of the week's 168 hours when at least three places nearby are open. "
-                    "Needs five places with readable opening hours, so it is blank away from "
-                    "high streets and centres.",
+                    "Only about a tenth of places publish opening hours in OSM, and chains are "
+                    "tagged better than independent shops, so this needs five readable places in "
+                    "a hexagon and is blank away from high streets and centres.",
      "source": "OSM opening hours"},
     {"id": "evening_share", "generator": "mixed_uses", "tier": "local",
      "label": "Open in the evening", "unit": "share of 18–24h", "direction": "higher",

@@ -144,10 +144,17 @@ def day_clocks(city: City, hexes: pd.DataFrame) -> dict:
 
     places = osm.load(city)
     cells = assign_points(places, city.h3_resolution)
-    return {
-        "days": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
-        "areas": area_clocks(places, hexes, cells),
-    }
+    areas = area_clocks(places, hexes, cells)
+
+    # Only a tenth or so of places publish opening hours in OSM, and which ones
+    # do is not even between districts: a shopping centre full of chains is
+    # tagged far better than a street of independent shops. Each area therefore
+    # carries the number of places known at all, so the chart can say what share
+    # of them it is actually drawing.
+    known = hexes.dropna(subset=["study_area"]).groupby("study_area")["places"].sum()
+    for area, values in areas.items():
+        values["mapped"] = int(known.get(area, 0))
+    return {"days": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], "areas": areas}
 
 
 def run(city: City) -> None:
@@ -162,6 +169,9 @@ def run(city: City) -> None:
     # the hexagon metrics are only those this city has.
     published = {*metric_ids, *LINK_METRIC_IDS, *PARK_METRIC_IDS}
     site_metrics = [m for m in METRICS if m["id"] in published]
+    # A generator or chapter with nothing to show would be an empty tab.
+    measured = {m["generator"] for m in site_metrics}
+    site_generators = [g for g in GENERATORS if g["id"] in measured]
     keep = [c for c in ["h3", "land_ha", "study_area", "units", "places", "dwellings",
                         "cbs_population", *metric_ids] if c in hexes.columns]
     web = hexes[keep + ["geometry"]].copy()
@@ -204,7 +214,7 @@ def run(city: City) -> None:
         "h3_resolution": city.h3_resolution,
         "sources": {"overture_release": city.source_config("overture").get("release")},
         "bounds": [_round(v, 5) for v in bounds],
-        "generators": GENERATORS,
+        "generators": site_generators,
         "metrics": site_metrics,
         "areas": area_profiles(hexes, areas, metrics_list),
         "city_median": {m: _round(hexes[m].median()) for m in metric_ids},

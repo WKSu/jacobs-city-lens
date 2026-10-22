@@ -30,7 +30,8 @@ export function renderClocks(el, controlsEl, legendEl, tooltip, city, clocks) {
   controlsEl.innerHTML = "";
 
   el.innerHTML = areas.map((a) => `<figure class="sm-card" data-a="${a.id}">
-    <figcaption><b>${a.label}</b><span>${clocks.areas[a.id].places} places</span></figcaption>
+    <figcaption><b>${a.label}</b><span>${clocks.areas[a.id].places} of ${
+      clocks.areas[a.id].mapped || "?"} places</span></figcaption>
   </figure>`).join("");
 
   for (const area of areas) {
