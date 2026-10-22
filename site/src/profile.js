@@ -46,7 +46,7 @@ export function renderProfile(el, legendEl, tableEl, tooltip, city) {
     svg.append("text").attr("class", "row-label")
       .attr("x", narrow ? x(0) : lw).attr("y", narrow ? r.y - 12 : r.y + 4)
       .attr("text-anchor", narrow ? "start" : "end")
-      .text(m.direction === "lower" ? `${m.label} (shorter is better)` : m.label);
+      .text(m.direction === "lower" ? `${m.label} (${m.unit === "m" ? "shorter" : "smaller"} is better)` : m.label);
     svg.append("line").attr("x1", x(0)).attr("x2", x(100)).attr("y1", r.y).attr("y2", r.y)
       .attr("stroke", "var(--grid)");
     for (const a of city.areas) {

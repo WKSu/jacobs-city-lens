@@ -56,3 +56,12 @@ def test_entropy():
     assert np.isclose(h[0], 1.0)
     assert np.isclose(h[1], 0.0)
     assert np.isnan(h[2])
+
+
+def test_percentile_orientation():
+    from jacobs.export import percentile_of
+
+    values = pd.Series([1.0, 2.0, 3.0, 4.0, np.nan])
+    assert percentile_of(values, 4.0, "higher") == 87.5
+    assert percentile_of(values, 4.0, "lower") == 12.5
+    assert percentile_of(values, np.nan, "higher") is None
