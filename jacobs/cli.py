@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import importlib
 
 from jacobs.config import list_cities, load_city
+
+# Global tier plus the local tiers, which are only available for some countries
+# (see docs/data-sources.md). Each module exposes fetch(city, force=...).
+SOURCES = ["overture", "bag", "cbs", "bgt", "osm"]
 
 
 def main() -> None:
@@ -13,8 +18,9 @@ def main() -> None:
 
     fetch = sub.add_parser("fetch", help="download source data for a city")
     fetch.add_argument("city")
-    fetch.add_argument("--source", default="overture")
-    fetch.add_argument("--layers", nargs="*", help="only these layers")
+    fetch.add_argument("--source", default="overture", choices=SOURCES)
+    fetch.add_argument("--layers", nargs="*", help="only these layers (overture)")
+    fetch.add_argument("--force", action="store_true", help="re-download even if cached")
 
     metrics = sub.add_parser("metrics", help="compute all metrics on the H3 grid")
     metrics.add_argument("city")
@@ -36,8 +42,9 @@ def main() -> None:
             from jacobs.sources import overture
 
             overture.fetch(city, args.layers)
-        else:
-            raise SystemExit(f"Unknown source '{args.source}'")
+            return
+        module = importlib.import_module(f"jacobs.sources.{args.source}")
+        module.fetch(city, force=args.force)
     elif args.command == "metrics":
         from jacobs import pipeline
 

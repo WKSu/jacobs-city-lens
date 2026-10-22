@@ -9,6 +9,7 @@ site/public/data/<city>/figure_ground.json   buildings + streets around each stu
 site/public/data/<city>/links.geojson     street links with eyes-on-the-street metrics
 site/public/data/<city>/vacuums.geojson   border vacuums by type
 site/public/data/<city>/parks.geojson     parks with the uses around them
+site/public/data/<city>/clocks.json       open places by weekday and hour per study area
 site/public/data/<city>/places.json       every counted place, by group (compact points)
 site/public/data/<city>/addresses.json    every address location with its count (compact points)
 site/public/data/<city>/intersections.json   street intersections (compact points)
@@ -33,7 +34,6 @@ from jacobs.metrics.registry import (
     GENERATORS,
     HEX_METRICS,
     LINK_METRIC_IDS,
-    METRIC_IDS,
     METRICS,
     PARK_METRIC_IDS,
 )
@@ -66,12 +66,22 @@ def percentile_of(values: pd.Series, x: float, direction: str) -> float | None:
     return round(100 * (beats if direction == "higher" else 1 - beats), 1)
 
 
-def area_profiles(hexes: pd.DataFrame, areas: gpd.GeoDataFrame) -> list[dict]:
+def available_metrics(hexes: pd.DataFrame) -> list[dict]:
+    """The hexagon metrics this city actually has.
+
+    A city with no national register has no local-tier columns, and a hexagon
+    metric that is blank everywhere says nothing, so neither is written to
+    city.json rather than being published empty.
+    """
+    return [m for m in HEX_METRICS if m["id"] in hexes.columns and hexes[m["id"]].notna().any()]
+
+
+def area_profiles(hexes: pd.DataFrame, areas: gpd.GeoDataFrame, metrics_list: list[dict]) -> list[dict]:
     profiles = []
     for _, a in areas.iterrows():
         sub = hexes[hexes["study_area"] == a["area"]]
         metrics = {}
-        for m in HEX_METRICS:
+        for m in metrics_list:
             med = sub[m["id"]].median()
             metrics[m["id"]] = {
                 "median": _round(med),
@@ -128,6 +138,33 @@ def _ring(coords, close):
     return "M" + "L".join(pts) + ("Z" if close else "")
 
 
+def day_clocks(city: City, hexes: pd.DataFrame) -> dict:
+    """How many places are open in each hour of the week, per study area.
+
+    Empty for cities with no opening-hours source, which the site reads as
+    "no day clocks for this city" rather than as zero places open.
+    """
+    if "osm" not in city.sources:
+        return {}
+    from jacobs.grid import assign_points
+    from jacobs.metrics.temporal_mix import area_clocks
+    from jacobs.sources import osm
+
+    places = osm.load(city)
+    cells = assign_points(places, city.h3_resolution)
+    areas = area_clocks(places, hexes, cells)
+
+    # Only a tenth or so of places publish opening hours in OSM, and which ones
+    # do is not even between districts: a shopping centre full of chains is
+    # tagged far better than a street of independent shops. Each area therefore
+    # carries the number of places known at all, so the chart can say what share
+    # of them it is actually drawing.
+    known = hexes.dropna(subset=["study_area"]).groupby("study_area")["places"].sum()
+    for area, values in areas.items():
+        values["mapped"] = int(known.get(area, 0))
+    return {"days": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], "areas": areas}
+
+
 def compact_points(gdf: gpd.GeoDataFrame, origin: tuple[float, float]) -> np.ndarray:
     """(n, 2) integer offsets from origin in 1e-5 degrees."""
     xy = gdf.to_crs(4326).geometry.get_coordinates().to_numpy()
@@ -165,12 +202,23 @@ def run(city: City) -> None:
     hexes = gpd.read_parquet(city.processed_dir / "hex.parquet")
     areas = gpd.read_parquet(city.processed_dir / "areas.parquet")
 
+    metrics_list = available_metrics(hexes)
+    metric_ids = [m["id"] for m in metrics_list]
+    # Street and park metrics live on their own layers, so they are always sent;
+    # the hexagon metrics are only those this city has.
+    published = {*metric_ids, *LINK_METRIC_IDS, *PARK_METRIC_IDS}
+    site_metrics = [m for m in METRICS if m["id"] in published]
+    # A generator or chapter with nothing to show would be an empty tab.
+    measured = {m["generator"] for m in site_metrics}
+    site_generators = [g for g in GENERATORS if g["id"] in measured]
+
     # Raw counts behind each hexagon's numbers, so the site can show how they are made.
     counts = ["units", "places", "intersections", *(f"n_{g}" for g in GROUP_NAMES)]
-    keep = ["h3", "land_ha", "study_area", *counts, *METRIC_IDS]
+    local_counts = [c for c in ["dwellings", "cbs_population"] if c in hexes.columns]
+    keep = ["h3", "land_ha", "study_area", *counts, *local_counts, *metric_ids]
     web = hexes[keep + ["geometry"]].copy()
     web[counts] = web[counts].fillna(0).astype(int)
-    for col in METRIC_IDS + ["land_ha"]:
+    for col in metric_ids + ["land_ha"]:
         web[col] = web[col].round(4)
     _write_geojson(web, out / "hex.geojson")
     _write_geojson(areas[["area", "label", "role", "geometry"]], out / "areas.geojson")
@@ -183,6 +231,7 @@ def run(city: City) -> None:
     _write_geojson(water, out / "water.geojson")
 
     (out / "figure_ground.json").write_text(json.dumps(figure_ground(city, areas)))
+    (out / "clocks.json").write_text(json.dumps(day_clocks(city, hexes)))
 
     links = gpd.read_parquet(city.processed_dir / "eyes_links.parquet")
     # length_m only between two intersections: Jacobs' block length (dead ends get none)
@@ -215,14 +264,14 @@ def run(city: City) -> None:
         "h3_resolution": city.h3_resolution,
         "sources": {"overture_release": city.source_config("overture").get("release")},
         "bounds": [_round(v, 5) for v in bounds],
-        "generators": GENERATORS,
+        "generators": site_generators,
         "story": city.story,
         "place_groups": GROUP_NAMES,
-        "metrics": METRICS,
-        "areas": area_profiles(hexes, areas),
-        "city_median": {m: _round(hexes[m].median()) for m in METRIC_IDS},
+        "metrics": site_metrics,
+        "areas": area_profiles(hexes, areas, metrics_list),
+        "city_median": {m: _round(hexes[m].median()) for m in metric_ids},
         "distributions": {
-            **{m: [_round(v) for v in hexes[m].dropna().sort_values()] for m in METRIC_IDS},
+            **{m: [_round(v) for v in hexes[m].dropna().sort_values()] for m in metric_ids},
             **{m: [_round(v) for v in parks[m].dropna().sort_values()] for m in PARK_METRIC_IDS},
         },
         "link_distributions": {m: [_round(v, 3) for v in links[m].dropna().sort_values()[::5]]

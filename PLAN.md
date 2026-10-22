@@ -105,16 +105,21 @@ benefits from a pipeline that has already been tested).
 |---|---|---|
 | Overture pipeline, H3 grid, short blocks, density, mixed use (global tier) | `feat/overture-pipeline` | done |
 | Website v1: map explorer, district profiles, figure-ground, density chart | `feat/site-v1` | done |
-| BAG: use classes per unit, construction years (generators 1, 3, 4) | issue 01 | blocked: PDOK not reachable from the build environment |
-| 3DBAG floor area (FSI) and Spacemate chart | issue 02 | todo |
-| CBS 100 m grid: population, WOZ value spread | issue 03 | todo |
-| Opening hours: time-of-day mix | issue 04 | todo |
-| Border vacuums | issue 05 | todo |
-| Eyes on the street: frontage and active ground floors | issue 06 | todo |
-| Parks and their surroundings | issue 07 | todo |
-| Car space (BGT) | issue 08 | todo |
-| GitHub Pages deploy + CI | issue 09 | workflow ready |
-| Next cities: New York, Hanoi | issues 10, 11 | todo |
+| BAG: use classes per unit, construction years (generators 1, 3, 4) | issue 3 | done, `feat/local-tier-nl` |
+| CBS 100 m grid: residents, WOZ value spread, tenure | issue 5 | done, `feat/local-tier-nl` |
+| Car space (BGT) | issue 10 | done, `feat/local-tier-nl` |
+| Opening hours: time-of-day mix | issue 6 | done, `feat/local-tier-nl` |
+| FSI and the Spacemate chart | issue 4 | FSI and OSR done from BAG floor area; 3DBAG heights still blocked (`data.3dbag.nl` unreachable) |
+| GitHub Pages deploy | issue 11 | done: Pages source switched from legacy to GitHub Actions |
+| Border vacuums | issue 7 | done |
+| Eyes on the street: frontage and active ground floors | issue 8 | done |
+| Parks and their surroundings | issue 9 | done |
+| Next cities: New York, Hanoi | issues 12, 13 | todo |
+
+The national registers turned out to be reachable from a local machine even
+though the cloud build environment blocks them, so the local tier for Rotterdam
+is in. Only 3DBAG is genuinely unavailable. See
+[docs/data-sources.md](docs/data-sources.md#host-access-as-measured).
 
 Drafts of the issues are in `docs/issues/`. `scripts/create_issues.sh` files them
 on GitHub.

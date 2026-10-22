@@ -4,6 +4,7 @@ import { renderFigureGround } from "./figureground.js";
 import { renderDensity } from "./density.js";
 import { renderVacuums } from "./vacuums.js";
 import { renderParks } from "./parks.js";
+import { renderClocks } from "./clocks.js";
 import { onThemeChange } from "./theme.js";
 import { STORIES } from "./stories.js";
 import { renderModel } from "./models.js";
@@ -26,14 +27,15 @@ const EMPTY = { type: "FeatureCollection", features: [] };
 const optional = (path) => getJSON(path).catch(() => EMPTY);
 
 async function loadCity(id) {
-  const [city, hex, areas, water, fg, links, vacuums, parks] = await Promise.all([
+  const [city, hex, areas, water, fg, links, vacuums, parks, clocks] = await Promise.all([
     getJSON(`${id}/city.json`), getJSON(`${id}/hex.geojson`), getJSON(`${id}/areas.geojson`),
     getJSON(`${id}/water.geojson`), getJSON(`${id}/figure_ground.json`),
     optional(`${id}/links.geojson`), optional(`${id}/vacuums.geojson`), optional(`${id}/parks.geojson`),
+    getJSON(`${id}/clocks.json`).catch(() => ({})),
   ]);
   state.city = city;
   state.hex = null;
-  state.data = { hex, areas, water, fg, links, vacuums, parks };
+  state.data = { hex, areas, water, fg, links, vacuums, parks, clocks };
   hexMap.onHexClick = (p) => { state.hex = p; explainHex($("explain"), state.generator, p, city); };
   await hexMap.load(city, state.data);
   loadGround(id);
@@ -116,7 +118,7 @@ function selectGenerator(id) {
   const metrics = city.metrics.filter((m) => m.generator === id);
   const buttons = $("metric-buttons");
   if (!metrics.length) {
-    buttons.innerHTML = `<p class="pending-note">Not measured yet: ${g.status}.</p>`;
+    buttons.innerHTML = `<p class="pending-note">Not measured yet${g.status ? `: ${g.status}` : ""}.</p>`;
     return;
   }
   buttons.innerHTML = metrics.map((m) =>
@@ -133,6 +135,7 @@ function selectMetric(id) {
   hexMap.legend($("legend"));
   $("metric-description").textContent = m.description;
   $("metric-source").textContent = `Source: ${m.source}. ${
+    m.tier === "local" ? "National register, so this one is not comparable with other countries. " : ""}${
     m.direction === "lower" ? "Lower values are closer to what Jacobs asked for." : ""}`;
 }
 
@@ -143,6 +146,7 @@ function renderCharts() {
   renderDensity($("density-chart"), $("density-intro"), tooltip, city);
   renderVacuums($("vacuum-chart"), $("vacuum-controls"), tooltip, city);
   renderParks($("park-chart"), $("park-controls"), $("park-legend"), tooltip, city, data.parks);
+  renderClocks($("clock-chart"), $("clock-controls"), $("clock-legend"), tooltip, city, data.clocks);
 }
 
 function renderMethod() {
@@ -157,9 +161,20 @@ function renderMethod() {
     <p>Eyes on the street is measured per street (intersection to intersection) and then averaged over
     each hexagon's street length. Border vacuums are detected from Overture land use, rail and motorway
     lines, water, and the street network itself; parks are Overture land use parks over 0.5 ha.</p>
-    <p>Jacobs' arguments are qualitative. Each indicator here is one interpretation of them, and
-    the third generator (aged buildings) waits for BAG construction years. See the project's
-    <code>docs/</code> folder for definitions and data sources.</p>`;
+    <p>Metrics come in two tiers. The <b>global</b> tier is computed the same way for every city,
+    from Overture, so cities can be compared. The <b>local</b> tier uses a national register and
+    exists only where that register does: for ${city.name} that is the BAG for the use class, floor
+    area and construction year of every unit, the CBS 100 m grid for residents, dwelling value and
+    tenure, the BGT for how street space divides between cars and people, and OSM opening hours for
+    the time of day. Those are richer but stop at the border, so each one is labelled where it is
+    shown.</p>
+    <p>Two of them are worth a word. The use mix in the local tier is floor area across legal use
+    classes with <em>homes included</em>, which a count of shops can never see, though housing is
+    the use that puts people on a street in the evening. And the spread of dwelling value is a
+    spread, not an average: her case for old buildings is a case for a mix of rents, so the
+    variation inside a neighbourhood is the measure.</p>
+    <p>Jacobs' arguments are qualitative. Each indicator here is one interpretation of them. See the
+    project's <code>docs/</code> folder for definitions and data sources.</p>`;
 }
 
 async function init() {
