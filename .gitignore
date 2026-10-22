@@ -1,0 +1,7 @@
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+.venv/
+__pycache__/
+*.pmtiles
+.ipynb_checkpoints/
