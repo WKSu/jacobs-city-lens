@@ -64,3 +64,68 @@ study_areas:
     role: planned
     note: 1950s "neighbourhood unit" garden district, repeated stamps of housing around greens.
     match: { subtype: microhood, name: Pendrecht }
+
+# The story told in each tab before the indicators: a Rotterdam scene and the
+# places the map can fly to. `center` is [lon, lat]. Districts in `quiz` appear
+# in the density quiz, in that order.
+story:
+  quiz: [kop_van_zuid, oude_noorden, ommoord, pendrecht]
+  scenes:
+    mixed_uses:
+      text: >-
+        Zwart Janstraat in Oude Noorden is a 19th-century shopping street. The data finds over
+        200 places along it: restaurants, clothes shops, hairdressers, hardware and food shops
+        and small offices on the ground floor, with homes above. In Ommoord the
+        planners gathered the shops in one centre, Hesseplaats, and kept the streets around it
+        for housing. Zoom in on both and compare the dots.
+      places:
+        - { label: Zwart Janstraat, center: [4.4751, 51.9348], zoom: 16 }
+        - { label: Ommoord around Hesseplaats, center: [4.5522, 51.9625], zoom: 15.5 }
+    short_blocks:
+      text: >-
+        Oude Noorden's grid gives a corner every 60 m or so. Ommoord's streets loop around
+        large superblocks, crossed by footpaths through the green. Look at the colours of the
+        streets: the strongest colours are long stretches without a corner.
+      places:
+        - { label: Oude Noorden, center: [4.4751, 51.9348], zoom: 15.5 }
+        - { label: Ommoord, center: [4.5450, 51.9625], zoom: 15.5 }
+    concentration:
+      text: >-
+        Ommoord's towers and slabs look dense, and Oude Noorden's four-storey blocks look
+        modest. Count the dots: every dot is one address. The low, continuous blocks hold
+        about three times as many homes per hectare, because there is no lawn between them.
+      places:
+        - { label: Oude Noorden, center: [4.4751, 51.9348], zoom: 16 }
+        - { label: Ommoord, center: [4.5450, 51.9625], zoom: 16 }
+    eyes:
+      text: >-
+        On Zwart Janstraat, narrow houses and shopfronts line both sides, so dozens of doors
+        and windows overlook every stretch. On Kop van Zuid, towers stand back from wide quays
+        behind a single lobby each. Zoom in to see each street's own score.
+      places:
+        - { label: Zwart Janstraat, center: [4.4751, 51.9348], zoom: 16.5 }
+        - { label: Kop van Zuid, center: [4.4870, 51.9045], zoom: 16 }
+        - { label: Ommoord, center: [4.5450, 51.9625], zoom: 16 }
+    border_vacuums:
+      text: >-
+        The railway north of Rotterdam Centraal cuts the city in two. Walk away from the tracks
+        into Provenierswijk or Agniesebuurt and count when the shops start again.
+      places:
+        - { label: Rail north of Centraal, center: [4.4680, 51.9265], zoom: 15.5 }
+        - { label: Motorway at Kleinpolderplein, center: [4.4365, 51.9354], zoom: 15 }
+    parks:
+      text: >-
+        Wijkpark Oude Westen is small, but buildings look onto its whole edge and the district
+        around it is mixed. Vlinderstrik is 85 ha with almost no buildings at its edge.
+      places:
+        - { label: Wijkpark Oude Westen, center: [4.4704, 51.9187], zoom: 16.5 }
+        - { label: Vlinderstrik, center: [4.4656, 51.9751], zoom: 14.5 }
+    aged_buildings:
+      text: >-
+        The bombing of 14 May 1940 destroyed the old city centre, so the rebuilt core around the
+        Lijnbaan is almost all one age. Oude Noorden and Oude Westen survived. In the 1970s Oude
+        Westen's residents fought planned demolition and won renovation for the people already
+        living there.
+      places:
+        - { label: Lijnbaan, center: [4.4760, 51.9205], zoom: 16 }
+        - { label: Oude Westen, center: [4.4700, 51.9175], zoom: 16 }

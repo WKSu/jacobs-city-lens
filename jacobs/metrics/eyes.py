@@ -111,5 +111,5 @@ def compute(grid: gpd.GeoDataFrame, links: gpd.GeoDataFrame, buildings: gpd.GeoD
     out["buildings_per_100m"] = (100 * w["fronting_buildings"] / w["length"]).where(enough)
     out["places_per_100m"] = (100 * w["places"] / w["length"]).where(enough)
     out["eyes_score"] = (w["eyes_m"] / w["length"]).where(enough)
-    cols = ["h3", "length", "frontage_share", "buildings_per_100m", "places_per_100m", "eyes_score", "geometry"]
+    cols = ["h3", "length", "ends", "frontage_share", "buildings_per_100m", "places_per_100m", "eyes_score", "geometry"]
     return out, lm[cols].reset_index(drop=True)

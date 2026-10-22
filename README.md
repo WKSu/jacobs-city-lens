@@ -54,9 +54,11 @@ site/                          Vite + MapLibre + D3, deployed on GitHub Pages
 
 ## What the site shows
 
-1. **The four generators, and what surrounds them**: a hexagon map per metric, organised
-   by chapter, plus eyes on the street (single streets when zoomed in), border vacuums
-   and parks.
+1. **The four generators, and what surrounds them**: one tab per chapter. Each tab opens
+   with Jacobs' idea, a scene from the book, a Rotterdam scene with places to fly to on the
+   map, and a small interactive model of the mechanism (labelled as a sketch or as city
+   data). The hexagon map follows. Zoom in to see what each indicator counts (every place,
+   address, intersection and street), and click a hexagon to see how its numbers are made.
 2. **Old districts and planned ones**: a profile chart placing each district on
    the city's distribution (further right is closer to what Jacobs asked for).
 3. **Figure-ground**: the same 800 × 800 m of buildings and streets for each district.

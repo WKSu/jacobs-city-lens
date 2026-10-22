@@ -6,12 +6,15 @@ import { renderVacuums } from "./vacuums.js";
 import { renderParks } from "./parks.js";
 import { renderClocks } from "./clocks.js";
 import { onThemeChange } from "./theme.js";
+import { STORIES } from "./stories.js";
+import { renderModel } from "./models.js";
+import { explainHex } from "./explain.js";
 
 const base = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
 const tooltip = $("tooltip");
 const hexMap = new HexMap($("map"), tooltip);
-const state = { generator: "short_blocks", metric: null, city: null, data: null };
+const state = { generator: "short_blocks", metric: null, city: null, data: null, hex: null, redrawModel: null };
 
 async function getJSON(path) {
   const res = await fetch(`${base}data/${path}`);
@@ -31,11 +34,67 @@ async function loadCity(id) {
     getJSON(`${id}/clocks.json`).catch(() => ({})),
   ]);
   state.city = city;
+<<<<<<< HEAD
   state.data = { hex, areas, water, fg, links, vacuums, parks, clocks };
+=======
+  state.hex = null;
+  state.data = { hex, areas, water, fg, links, vacuums, parks };
+  hexMap.onHexClick = (p) => { state.hex = p; explainHex($("explain"), state.generator, p, city); };
+>>>>>>> origin/main
   await hexMap.load(city, state.data);
+  loadGround(id);
   renderTabs();
   renderCharts();
   renderMethod();
+}
+
+// Compact point files: [dx, dy, extra...] integers from an origin (see jacobs/export.py).
+function decodePoints(file, stride, props) {
+  const { origin: [x0, y0], scale, points } = file;
+  const features = [];
+  for (let i = 0, k = 0; i < points.length; i += stride, k++) {
+    features.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [x0 + points[i] / scale, y0 + points[i + 1] / scale] },
+      properties: props(points, i, k),
+    });
+  }
+  return { type: "FeatureCollection", features };
+}
+
+// The things the indicators count load after the map, so the page is usable first.
+async function loadGround(id) {
+  const [places, addresses, intersections] = await Promise.all(
+    ["places", "addresses", "intersections"].map((n) => getJSON(`${id}/${n}.json`).catch(() => null)));
+  if (state.city?.id !== id) return;
+  if (places) hexMap.setGround("places", decodePoints(places, 3, (p, i, k) => ({ group: places.groups[p[i + 2]], name: places.names[k] })));
+  if (addresses) hexMap.setGround("addresses", decodePoints(addresses, 3, (p, i) => ({ n: p[i + 2] })));
+  if (intersections) hexMap.setGround("intersections", decodePoints(intersections, 2, () => ({})));
+}
+
+function renderStory(g) {
+  const { city, data } = state;
+  const story = STORIES[g.id] || {};
+  const scene = city.story?.scenes?.[g.id];
+  $("story-idea").textContent = story.idea || "";
+  $("story-scene").textContent = story.scene || "";
+  $("story-scene-source").textContent = story.scene ? `In the book, chapter ${story.chapter}` : "";
+  $("story-city-block").hidden = !scene;
+  if (scene) {
+    $("story-city-title").textContent = `In ${city.name}`;
+    $("story-city").textContent = scene.text;
+    $("story-places").innerHTML = (scene.places || []).map((p, i) =>
+      `<button type="button" class="place-btn" data-i="${i}">Show ${p.label} on the map</button>`).join("");
+    $("story-places").querySelectorAll(".place-btn").forEach((b) => b.addEventListener("click", () => {
+      const p = scene.places[+b.dataset.i];
+      hexMap.flyTo(p.center, p.zoom);
+      $("map").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    }));
+  }
+  $("story-counts").textContent = story.counts || "";
+  $("story-honest").textContent = story.honest ? `Limits: ${story.honest}` : "";
+  state.redrawModel = renderModel(story.model, $("story-model"), { city, data });
+  $("story").classList.toggle("no-model", $("story-model").hidden);
 }
 
 function renderTabs() {
@@ -58,6 +117,8 @@ function selectGenerator(id) {
   const g = city.generators.find((x) => x.id === id);
   $("generator-tabs").querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", b.dataset.g === id));
   $("generator-summary").textContent = g.summary;
+  renderStory(g);
+  explainHex($("explain"), id, state.hex, city);
   const metrics = city.metrics.filter((m) => m.generator === id);
   const buttons = $("metric-buttons");
   if (!metrics.length) {
@@ -132,7 +193,7 @@ async function init() {
   await loadCity(first);
   let t;
   window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(renderCharts, 150); });
-  onThemeChange(renderCharts);
+  onThemeChange(() => { renderCharts(); state.redrawModel?.(); });
 }
 
 init().catch((err) => {

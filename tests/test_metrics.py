@@ -65,3 +65,16 @@ def test_percentile_orientation():
     assert percentile_of(values, 4.0, "higher") == 87.5
     assert percentile_of(values, 4.0, "lower") == 12.5
     assert percentile_of(values, np.nan, "higher") is None
+
+
+def test_compact_points_round_trip():
+    from shapely.geometry import Point
+
+    from jacobs.export import POINT_SCALE, compact_points
+
+    origin = (4.378, 51.86)
+    pts = gpd.GeoDataFrame(geometry=[Point(4.47512, 51.93481), Point(4.378, 51.86)], crs=4326)
+    xy = compact_points(pts, origin)
+    assert xy.tolist() == [[9712, 7481], [0, 0]]
+    back = np.array(origin) + xy / POINT_SCALE
+    assert np.allclose(back, [[4.47512, 51.93481], [4.378, 51.86]])
