@@ -20,7 +20,7 @@ use the **local tier**, and every chart says which tier it shows.
 | Jobs | CBS buurt: business establishments by sector (LISA is better but not open) | Overture places as proxy | LEHD LODES WAC | — |
 | Opening hours (time-of-day mix) | OSM `opening_hours` | OSM | OSM | OSM (sparse) |
 | Safety (eyes on the street) | Rotterdam *Wijkprofiel* safety index; police crime counts per buurt (data.politie.nl via CBS) | — | NYPD / Chicago open crime data | — |
-| Car space | **BGT** road / parking surfaces; CBS cars per household | Overture road class + width | — | motorbike ownership (census) |
+| Car space | **BGT** `wegdeel` surfaces; CBS `personenautosPerHuishouden` per buurt | Overture road class + width | — | motorbike ownership (census); CBS has `motortweewielersTotaal` for NL |
 | Transit | GTFS NL (OVapi) | GTFS / Overture | GTFS | Hanoi bus GTFS (community) |
 | History | Rotterdam 1940 *brandgrens* (fire boundary); Kadaster TopoTijdReis historic maps | — | Sanborn maps (Boston West End) | — |
 
@@ -64,6 +64,7 @@ fetched that way. Only 3DBAG is genuinely unavailable.
 | `api.pdok.nl/kadaster/bag/ogc/v2` | yes | BAG units and buildings |
 | `api.pdok.nl/lv/bgt/ogc/v1` | yes | BGT surfaces, `wegdeel` |
 | `api.pdok.nl/cbs/vierkantstatistieken100m/ogc/v1` | yes | CBS 100 m grid |
+| `service.pdok.nl/cbs/wijkenbuurten/<year>/wfs/v1_0` | yes | CBS neighbourhood statistics (WFS, not OGC API) |
 | `overpass-api.de` | yes | needs a descriptive `User-Agent`, else HTTP 406 |
 | `opendata.cbs.nl` | yes | not needed; PDOK serves the grid with geometry |
 | `data.3dbag.nl` | **no** | DNS resolves, TCP to :443 times out; other TU Delft hosts too |
@@ -91,6 +92,14 @@ over 400k BGT surfaces, at 1000 features per request.
 
 * **PDOK OGC APIs cap `limit` at 1000** and return no `numberMatched`, so the
   client follows `next` links until they stop.
+* **The neighbourhood statistics are WFS only**, and that service ignores
+  `cql_filter`, so a bounding box is the only filter and neighbouring
+  municipalities come back too (`load_buurten` clips). It is requested in RD
+  coordinates because WFS 2.0 reads EPSG:4326 as latitude first.
+* **Car ownership is not in the 100 m grid at all** — none of its 143 fields
+  covers it — so chapter 18 takes it per neighbourhood. A hexagon gets a
+  households-weighted average of the neighbourhoods it overlaps, which is
+  blockier than everything else on the map.
 * **BAG `gebruiksdoel` can hold several classes**, comma-separated
   (`winkelfunctie,woonfunctie` is a shop with a home above it). The register
   does not say how the floor area divides, so it is split equally.

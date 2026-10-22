@@ -55,20 +55,62 @@ AGE_BANDS = {
 PROPERTIES = ("crs28992res100m", "jaarcode", *FIELDS, *AGE_BANDS)
 
 
+# Neighbourhood (buurt) statistics. Car ownership is not in the 100 m grid at
+# all, so chapter 18 needs this coarser source for the cars themselves.
+BUURT_WFS = "https://service.pdok.nl/cbs/wijkenbuurten/{year}/wfs/v1_0"
+BUURT_TYPE = "wijkenbuurten:buurten"
+BUURT_PROPERTIES = (
+    "buurtcode", "buurtnaam", "gemeentenaam",
+    "personenautosPerHuishouden", "personenautosPerKm2",
+    "aantalHuishoudens", "aantalInwoners", "gemiddeldeWoningwaarde",
+)
+BUURT_FIELDS = {
+    "personenautosPerHuishouden": "cars_per_household",
+    "personenautosPerKm2": "cars_per_km2",
+    "aantalHuishoudens": "households",
+    "aantalInwoners": "residents",
+    "gemiddeldeWoningwaarde": "buurt_woz",
+}
+
+
 def year_for(city: City) -> int:
     return int(city.source_config("cbs").get("year", DEFAULT_YEAR))
 
 
-def fetch(city: City, force: bool = False) -> gpd.GeoDataFrame:
-    """Download the CBS 100 m grid for the city's bounding box."""
+def fetch(city: City, force: bool = False) -> dict[str, gpd.GeoDataFrame]:
+    """Download the CBS 100 m grid and neighbourhood statistics."""
     year = year_for(city)
-    bbox = pdok.city_bbox(bag.boundary(city))
-    return pdok.fetch_items(
-        "cbs_grid", "vierkant100", bbox,
+    boundary = bag.boundary(city)
+    grid = pdok.fetch_items(
+        "cbs_grid", "vierkant100", pdok.city_bbox(boundary),
         city.raw_dir / "cbs" / f"vierkant100_{year}.parquet",
         properties=PROPERTIES, params={"jaarcode": year},
         force=force, label=f"cbs grid {year}",
     )
+    buurten = pdok.fetch_wfs(
+        BUURT_WFS.format(year=year), BUURT_TYPE,
+        tuple(boundary.to_crs(28992).total_bounds),
+        city.raw_dir / "cbs" / f"buurten_{year}.parquet",
+        properties=BUURT_PROPERTIES, force=force, label=f"cbs buurten {year}",
+    )
+    return {"grid": grid, "buurten": buurten}
+
+
+def load_buurten(city: City) -> gpd.GeoDataFrame:
+    """Neighbourhood statistics clipped to the city, with suppressed values as NaN."""
+    year = year_for(city)
+    path = city.raw_dir / "cbs" / f"buurten_{year}.parquet"
+    if not path.exists():
+        raise SystemExit(f"Missing {path}. Run: python -m jacobs fetch {city.id} --source cbs")
+
+    gdf = gpd.read_parquet(path).rename(columns=BUURT_FIELDS).to_crs(city.crs)
+    for col in BUURT_FIELDS.values():
+        values = pd.to_numeric(gdf[col], errors="coerce")
+        gdf[col] = values.where(values > SUPPRESSED)
+    shape = bag.boundary(city).to_crs(city.crs).geometry.union_all()
+    gdf = gdf[gdf.geometry.notna()]
+    gdf = gdf[gdf.intersects(shape)]
+    return gdf.set_geometry(gdf.geometry.make_valid())
 
 
 def load(city: City) -> gpd.GeoDataFrame:

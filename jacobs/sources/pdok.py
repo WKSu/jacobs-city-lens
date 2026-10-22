@@ -122,6 +122,59 @@ def fetch_items(
     return gdf
 
 
+def fetch_wfs(
+    base_url: str,
+    type_name: str,
+    bbox_rd: tuple[float, float, float, float],
+    out_path: Path,
+    properties: tuple[str, ...] | None = None,
+    force: bool = False,
+    label: str | None = None,
+) -> gpd.GeoDataFrame:
+    """Download a WFS feature type within `bbox_rd` (EPSG:28992), with caching.
+
+    Not everything PDOK publishes has an OGC API: the CBS neighbourhood
+    statistics are WFS only. Requested in RD coordinates because WFS 2.0 takes
+    EPSG:4326 as latitude first, which is easy to get silently wrong.
+    `cql_filter` is not honoured by this service, so the bounding box is the
+    only filter and neighbouring municipalities come back too; `load` clips.
+    """
+    if out_path.exists() and not force:
+        gdf = gpd.read_parquet(out_path)
+        print(f"[pdok] {label or type_name}: {len(gdf):,} cached features", flush=True)
+        return gdf
+
+    crs_urn = "urn:ogc:def:crs:EPSG::28992"
+    query = {
+        "service": "WFS", "version": "2.0.0", "request": "GetFeature",
+        "typeNames": type_name, "outputFormat": "application/json",
+        "srsName": "EPSG:28992", "count": str(PAGE_SIZE),
+        "bbox": ",".join(f"{v:.1f}" for v in bbox_rd) + f",{crs_urn}",
+    }
+    if properties:
+        query["propertyName"] = ",".join(properties)
+
+    frames: list[gpd.GeoDataFrame] = []
+    count = 0
+    for page in range(MAX_PAGES):
+        url = f"{base_url}?{urllib.parse.urlencode({**query, 'startIndex': page * PAGE_SIZE})}"
+        batch = _get_json(url).get("features") or []
+        if batch:
+            frames.append(_features_to_gdf(batch, properties))
+            count += len(batch)
+        if len(batch) < PAGE_SIZE:
+            break
+    else:
+        raise SystemExit(f"[pdok] {type_name}: hit MAX_PAGES, refusing to page further")
+
+    gdf = pd.concat(frames, ignore_index=True) if frames else _features_to_gdf([], properties)
+    gdf = gdf.set_crs("EPSG:28992", allow_override=True)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    gdf.to_parquet(out_path)
+    print(f"[pdok] {label or type_name}: wrote {len(gdf):,} features to {out_path}", flush=True)
+    return gdf
+
+
 def city_bbox(boundary: gpd.GeoDataFrame) -> tuple[float, float, float, float]:
     xmin, ymin, xmax, ymax = boundary.to_crs(4326).total_bounds
     return (xmin, ymin, xmax, ymax)

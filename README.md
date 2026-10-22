@@ -26,7 +26,7 @@ which carries building ages, use classes, dwelling values and street surfaces:
 
 ```sh
 uv run python -m jacobs fetch rotterdam --source bag   # units, buildings
-uv run python -m jacobs fetch rotterdam --source cbs   # 100 m grid statistics
+uv run python -m jacobs fetch rotterdam --source cbs   # 100 m grid + neighbourhoods
 uv run python -m jacobs fetch rotterdam --source bgt   # road and parking surfaces
 uv run python -m jacobs fetch rotterdam --source osm   # opening hours
 ```

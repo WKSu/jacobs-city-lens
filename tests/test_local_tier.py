@@ -247,6 +247,33 @@ def test_car_space_blank_when_barely_any_paving():
     assert np.isnan(out.loc[CELL, "car_space_share"])
 
 
+def make_buurten(rows):
+    """Neighbourhoods as squares covering the hexagon: (cars, households, size_m)."""
+    hexagon = make_grid().geometry.iloc[0]
+    minx, miny, _, _ = hexagon.bounds
+    records, geoms = [], []
+    for cars, households, size in rows:
+        records.append({"cars_per_household": cars, "households": households})
+        geoms.append(shapely.box(minx, miny, minx + size, miny + size))
+    return gpd.GeoDataFrame(records, geometry=geoms, crs=CRS)
+
+
+def test_cars_per_household_weighted_by_households_not_area():
+    # Two neighbourhoods overlap the hexagon equally, but one holds nine times
+    # the households, so the result sits near its rate rather than halfway.
+    rate = car_space.cars_per_household(
+        make_grid(), make_buurten([(1.0, 900, 400), (0.2, 100, 400)]), CRS)
+    assert rate[CELL] == pytest.approx((1.0 * 900 + 0.2 * 100) / 1000)
+
+
+def test_cars_per_household_blank_without_figures():
+    rate = car_space.cars_per_household(
+        make_grid(), make_buurten([(np.nan, 900, 400)]), CRS)
+    assert np.isnan(rate[CELL])
+    out = car_space.compute(make_grid(), make_wegdeel(["car"] * 4), CRS)
+    assert np.isnan(out.loc[CELL, "cars_per_household"])
+
+
 # --- temporal mix ------------------------------------------------------------
 
 def make_places(values, cell=CELL):

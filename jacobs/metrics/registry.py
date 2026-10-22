@@ -207,6 +207,12 @@ METRICS = [
      "label": "Land under cars", "unit": "share of land", "direction": "lower", "format": ".0%",
      "description": "Share of all land, not only paving, taken by carriageway and parking.",
      "source": "BGT (NL)"},
+    {"id": "cars_per_household", "generator": "cars", "tier": "local",
+     "label": "Cars per household", "unit": "per household", "direction": "lower", "format": ".2f",
+     "description": "Cars owned per household. Published per neighbourhood rather than per 100 m, "
+                    "so a hexagon takes a households-weighted average of the neighbourhoods it "
+                    "overlaps and the map is blockier than the rest.",
+     "source": "CBS neighbourhood statistics (NL)"},
 ]
 
 for _metric in METRICS:

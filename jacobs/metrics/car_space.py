@@ -25,7 +25,36 @@ GROUPS = ["car", "pedestrian", "cycle", "transit", "other"]
 MIN_PAVED_M2 = 1000.0  # below this a hexagon is mostly fields or water
 
 
-def compute(grid: gpd.GeoDataFrame, wegdeel: gpd.GeoDataFrame, crs: str) -> pd.DataFrame:
+def cars_per_household(grid: gpd.GeoDataFrame, buurten: gpd.GeoDataFrame,
+                       crs: str) -> pd.Series:
+    """Cars per household per hexagon, from neighbourhood figures.
+
+    Car ownership is not published at 100 m, only per neighbourhood, so a
+    hexagon straddling two neighbourhoods has to borrow from both. Averaging the
+    two rates directly would weight a handful of households the same as a
+    thousand, so each piece is weighted by the households it is likely to hold:
+    its area times the neighbourhood's household density.
+    """
+    areas = buurten.to_crs(crs)
+    areas = areas.assign(_buurt_area=areas.area)
+    usable = areas[areas["cars_per_household"].notna() & areas["households"].notna()
+                   & (areas["_buurt_area"] > 0)]
+    if usable.empty:
+        return pd.Series(np.nan, index=grid["h3"], dtype=float)
+
+    columns = ["cars_per_household", "households", "_buurt_area", "geometry"]
+    pieces = gpd.overlay(usable[columns], grid[["h3", "geometry"]],
+                         how="intersection", keep_geom_type=True)
+    pieces = pieces.assign(
+        weight=pieces.area * pieces["households"] / pieces["_buurt_area"])
+    pieces = pieces.assign(weighted=pieces["cars_per_household"] * pieces["weight"])
+    totals = pieces.groupby("h3")[["weighted", "weight"]].sum()
+    rate = totals["weighted"] / totals["weight"].replace(0, np.nan)
+    return rate.reindex(grid["h3"])
+
+
+def compute(grid: gpd.GeoDataFrame, wegdeel: gpd.GeoDataFrame, crs: str,
+            buurten: gpd.GeoDataFrame | None = None) -> pd.DataFrame:
     out = pd.DataFrame(index=grid["h3"])
     land_ha = grid.set_index("h3")["land_ha"]
 
@@ -49,4 +78,6 @@ def compute(grid: gpd.GeoDataFrame, wegdeel: gpd.GeoDataFrame, crs: str) -> pd.D
     out["car_space_per_ha"] = (area_m2["car"] / 10_000 / land_ha).clip(upper=1)
     out["paved_share"] = (paved / 10_000 / land_ha).clip(upper=1)
     out["non_road_ha"] = (land_ha - paved / 10_000).clip(lower=0)
+    out["cars_per_household"] = (
+        cars_per_household(grid, buurten, crs) if buurten is not None else np.nan)
     return out

@@ -58,9 +58,10 @@ def local_tier(city: City, grid: gpd.GeoDataFrame,
 
     if "bgt" in city.sources:
         from jacobs.metrics import car_space
-        from jacobs.sources import bgt
+        from jacobs.sources import bgt, cbs
 
-        frame = car_space.compute(grid, bgt.load(city), city.crs)
+        buurten = cbs.load_buurten(city) if "cbs" in city.sources else None
+        frame = car_space.compute(grid, bgt.load(city), city.crs, buurten=buurten)
         net_ha = frame["non_road_ha"]
         frames.append(frame)
         print("[pipeline] car space done", flush=True)
