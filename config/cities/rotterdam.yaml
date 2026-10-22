@@ -12,10 +12,24 @@ boundary:
   # towards Maasvlakte, which would swamp every city-wide statistic).
   overture_division_area: d65bb0a5-cb1b-4e29-bd1d-7fd0328a7e7d
 
+# Listing a source here switches on the metrics that depend on it. The global
+# tier (overture) exists for every city; the rest are Dutch national registers,
+# so their metrics are labelled local and are not comparable with other
+# countries. See docs/data-sources.md.
 sources:
   overture:
     release: 2026-10-21.0
-  # Planned local sources (see docs/data-sources.md): bag, 3dbag, cbs_grid, bgt
+  # BAG: use class, floor area and construction year of every unit.
+  bag: {}
+  # CBS 100 m grid: residents, dwelling value, tenure. Dwelling value and
+  # tenure stop after 2023, so that is the year used.
+  cbs:
+    year: 2023
+  # BGT: paved surfaces, for the division of street space (ch. 18).
+  bgt: {}
+  # OSM opening hours, for the time-of-day mix. Overture has no opening hours.
+  osm: {}
+  # Still to come: 3dbag (floor area and FSI) — data.3dbag.nl is unreachable.
 
 # Neighbourhoods compared throughout the site. `match` selects Overture
 # division areas by subtype and name; `role` is how Jacobs would see the area.

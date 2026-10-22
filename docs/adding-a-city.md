@@ -31,6 +31,25 @@ goes in `jacobs/sources/<name>.py` and must:
   (e.g. `bag_use_mix` next to `use_mix`), and register them in
   `jacobs/metrics/registry.py` with a `tier: local` flag.
 
+A source module exposes two functions, as `bag.py`, `cbs.py`, `bgt.py` and
+`osm.py` do:
+
+* `fetch(city, force=False)` downloads and caches to
+  `data/raw/<city>/<source>/`, and returns early if the file is already there.
+  It is reached by `python -m jacobs fetch <city> --source <name>`, so the name
+  also goes in `SOURCES` in `jacobs/cli.py`.
+* `load(city)` reads the cache, clips it to the city boundary, drops records for
+  things that no longer exist, and reprojects to the city CRS.
+
+A city switches a source on by listing it under `sources` in its YAML. The
+pipeline reads those keys in `local_tier()`, so a city without a national
+register simply has no such columns, and `export.py` leaves those metrics out of
+`city.json` instead of writing empty ones. Nothing else needs changing.
+
+The Netherlands fetches are large and paged. Keep per-page conversion rather
+than collecting whole responses in memory: BGT alone is over 400,000 polygons
+for one city.
+
 ## Checks before publishing a city
 
 * Places per 1,000 addresses (or per 1,000 people) is within the range of

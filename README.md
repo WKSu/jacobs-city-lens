@@ -21,16 +21,30 @@ uv run pytest
 cd site && npm install && npm run dev        # http://localhost:5173
 ```
 
+For Rotterdam there is also a **local tier** from the Dutch national registers,
+which carries building ages, use classes, dwelling values and street surfaces:
+
+```sh
+uv run python -m jacobs fetch rotterdam --source bag   # units, buildings
+uv run python -m jacobs fetch rotterdam --source cbs   # 100 m grid statistics
+uv run python -m jacobs fetch rotterdam --source bgt   # road and parking surfaces
+uv run python -m jacobs fetch rotterdam --source osm   # opening hours
+```
+
+These are big paged downloads that cache under `data/raw/`, so they run once.
+See [docs/data-sources.md](docs/data-sources.md) for what each one gives and
+which hosts are reachable.
+
 ## How it works
 
 ```
 config/cities/<city>.yaml      boundary, CRS, study areas, sources
         │
 jacobs/sources/overture.py     global tier: buildings, places, streets, addresses, water
-jacobs/sources/<local>.py      local tier (planned): BAG, 3DBAG, CBS, BGT, PLUTO, ...
+jacobs/sources/{bag,cbs,bgt,osm}.py   local tier (NL): use classes, ages, values, surfaces
         │
 jacobs/grid.py                 H3 hexagons (resolution 9, ~10 ha)
-jacobs/metrics/*.py            one module per Jacobs generator or chapter (eyes, vacuums, parks)
+jacobs/metrics/*.py            one module per generator, chapter or data source
 jacobs/metrics/registry.py     metric definitions shared with the site
         │
 jacobs/export.py               small GeoJSON/JSON files in site/public/data/<city>/

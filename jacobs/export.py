@@ -9,6 +9,7 @@ site/public/data/<city>/figure_ground.json   buildings + streets around each stu
 site/public/data/<city>/links.geojson     street links with eyes-on-the-street metrics
 site/public/data/<city>/vacuums.geojson   border vacuums by type
 site/public/data/<city>/parks.geojson     parks with the uses around them
+site/public/data/<city>/clocks.json       open places by weekday and hour per study area
 """
 
 from __future__ import annotations
@@ -26,7 +27,6 @@ from jacobs.metrics.registry import (
     GENERATORS,
     HEX_METRICS,
     LINK_METRIC_IDS,
-    METRIC_IDS,
     METRICS,
     PARK_METRIC_IDS,
 )
@@ -58,12 +58,22 @@ def percentile_of(values: pd.Series, x: float, direction: str) -> float | None:
     return round(100 * (beats if direction == "higher" else 1 - beats), 1)
 
 
-def area_profiles(hexes: pd.DataFrame, areas: gpd.GeoDataFrame) -> list[dict]:
+def available_metrics(hexes: pd.DataFrame) -> list[dict]:
+    """The hexagon metrics this city actually has.
+
+    A city with no national register has no local-tier columns, and a hexagon
+    metric that is blank everywhere says nothing, so neither is written to
+    city.json rather than being published empty.
+    """
+    return [m for m in HEX_METRICS if m["id"] in hexes.columns and hexes[m["id"]].notna().any()]
+
+
+def area_profiles(hexes: pd.DataFrame, areas: gpd.GeoDataFrame, metrics_list: list[dict]) -> list[dict]:
     profiles = []
     for _, a in areas.iterrows():
         sub = hexes[hexes["study_area"] == a["area"]]
         metrics = {}
-        for m in HEX_METRICS:
+        for m in metrics_list:
             med = sub[m["id"]].median()
             metrics[m["id"]] = {
                 "median": _round(med),
@@ -120,15 +130,42 @@ def _ring(coords, close):
     return "M" + "L".join(pts) + ("Z" if close else "")
 
 
+def day_clocks(city: City, hexes: pd.DataFrame) -> dict:
+    """How many places are open in each hour of the week, per study area.
+
+    Empty for cities with no opening-hours source, which the site reads as
+    "no day clocks for this city" rather than as zero places open.
+    """
+    if "osm" not in city.sources:
+        return {}
+    from jacobs.grid import assign_points
+    from jacobs.metrics.temporal_mix import area_clocks
+    from jacobs.sources import osm
+
+    places = osm.load(city)
+    cells = assign_points(places, city.h3_resolution)
+    return {
+        "days": ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+        "areas": area_clocks(places, hexes, cells),
+    }
+
+
 def run(city: City) -> None:
     out = SITE_DATA / city.id
     out.mkdir(parents=True, exist_ok=True)
     hexes = gpd.read_parquet(city.processed_dir / "hex.parquet")
     areas = gpd.read_parquet(city.processed_dir / "areas.parquet")
 
-    keep = ["h3", "land_ha", "study_area", "units", "places", *METRIC_IDS]
+    metrics_list = available_metrics(hexes)
+    metric_ids = [m["id"] for m in metrics_list]
+    # Street and park metrics live on their own layers, so they are always sent;
+    # the hexagon metrics are only those this city has.
+    published = {*metric_ids, *LINK_METRIC_IDS, *PARK_METRIC_IDS}
+    site_metrics = [m for m in METRICS if m["id"] in published]
+    keep = [c for c in ["h3", "land_ha", "study_area", "units", "places", "dwellings",
+                        "cbs_population", *metric_ids] if c in hexes.columns]
     web = hexes[keep + ["geometry"]].copy()
-    for col in METRIC_IDS + ["land_ha"]:
+    for col in metric_ids + ["land_ha"]:
         web[col] = web[col].round(4)
     _write_geojson(web, out / "hex.geojson")
     _write_geojson(areas[["area", "label", "role", "geometry"]], out / "areas.geojson")
@@ -141,6 +178,7 @@ def run(city: City) -> None:
     _write_geojson(water, out / "water.geojson")
 
     (out / "figure_ground.json").write_text(json.dumps(figure_ground(city, areas)))
+    (out / "clocks.json").write_text(json.dumps(day_clocks(city, hexes)))
 
     links = gpd.read_parquet(city.processed_dir / "eyes_links.parquet")
     links = links.assign(geometry=links.geometry.simplify(1))
@@ -167,11 +205,11 @@ def run(city: City) -> None:
         "sources": {"overture_release": city.source_config("overture").get("release")},
         "bounds": [_round(v, 5) for v in bounds],
         "generators": GENERATORS,
-        "metrics": METRICS,
-        "areas": area_profiles(hexes, areas),
-        "city_median": {m: _round(hexes[m].median()) for m in METRIC_IDS},
+        "metrics": site_metrics,
+        "areas": area_profiles(hexes, areas, metrics_list),
+        "city_median": {m: _round(hexes[m].median()) for m in metric_ids},
         "distributions": {
-            **{m: [_round(v) for v in hexes[m].dropna().sort_values()] for m in METRIC_IDS},
+            **{m: [_round(v) for v in hexes[m].dropna().sort_values()] for m in metric_ids},
             **{m: [_round(v) for v in parks[m].dropna().sort_values()] for m in PARK_METRIC_IDS},
         },
         "link_distributions": {m: [_round(v, 3) for v in links[m].dropna().sort_values()[::5]]

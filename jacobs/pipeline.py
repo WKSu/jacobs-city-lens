@@ -42,6 +42,56 @@ def study_areas(city: City, divisions: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(rows, geometry="geometry", crs=divisions.crs)
 
 
+def local_tier(city: City, grid: gpd.GeoDataFrame,
+               coverage: pd.Series | None = None) -> list[pd.DataFrame]:
+    """Metrics from national registers, for the cities that have them.
+
+    Each block is switched on by a key in the city's `sources`, so a city
+    without a BAG simply gets none of these columns and the site leaves those
+    metrics out. Road surfaces come first because the net densities need to
+    know how much of the land is street. `coverage` is building coverage (GSI)
+    from the global tier, which the open space ratio needs.
+    """
+    frames: list[pd.DataFrame] = []
+    resolution = city.h3_resolution
+    net_ha = None
+
+    if "bgt" in city.sources:
+        from jacobs.metrics import car_space
+        from jacobs.sources import bgt
+
+        frame = car_space.compute(grid, bgt.load(city), city.crs)
+        net_ha = frame["non_road_ha"]
+        frames.append(frame)
+        print("[pipeline] car space done", flush=True)
+
+    if "bag" in city.sources:
+        from jacobs.metrics import aged_buildings, use_classes
+        from jacobs.sources import bag
+
+        units = bag.load(city)["units"]
+        frames.append(use_classes.compute(
+            grid, units, resolution, net_ha=net_ha, coverage=coverage))
+        frames.append(aged_buildings.compute(grid, units, resolution))
+        print("[pipeline] bag use classes and building ages done", flush=True)
+
+    if "cbs" in city.sources:
+        from jacobs.metrics import cbs_grid
+        from jacobs.sources import cbs
+
+        frames.append(cbs_grid.compute(grid, cbs.load(city), resolution, net_ha=net_ha))
+        print("[pipeline] cbs grid done", flush=True)
+
+    if "osm" in city.sources:
+        from jacobs.metrics import temporal_mix
+        from jacobs.sources import osm
+
+        frames.append(temporal_mix.compute(grid, osm.load(city), resolution))
+        print("[pipeline] opening hours done", flush=True)
+
+    return frames
+
+
 def run(city: City) -> gpd.GeoDataFrame:
     boundary = load_raw(city, "boundary")
     water = load_raw(city, "water")
@@ -76,8 +126,9 @@ def run(city: City) -> gpd.GeoDataFrame:
     )
     print(f"[pipeline] parks done ({len(park_gdf):,} parks)", flush=True)
 
+    local = local_tier(city, grid, coverage=density_metrics["coverage"])
     hexes = grid.set_index("h3").join(
-        [street_metrics, density_metrics, mix_metrics, eyes_metrics, vacuum_metrics]
+        [street_metrics, density_metrics, mix_metrics, eyes_metrics, vacuum_metrics, *local]
     ).reset_index()
 
     areas = study_areas(city, load_raw(city, "divisions")).to_crs(city.crs)
