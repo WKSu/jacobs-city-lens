@@ -85,13 +85,21 @@ uv run python -m jacobs build rotterdam
 
 Every fetch caches to `data/raw/<city>/<source>/` and is skipped if the file is
 already there; pass `--force` to download again. These are big, paged downloads
-from a public API: for Rotterdam, roughly 500k BAG units, 291k BAG buildings and
-over 400k BGT surfaces, at 1000 features per request.
+from a public API, 1000 features per request: for Rotterdam, 501k BAG units,
+291k BAG buildings, 8.3k CBS grid cells, 317 neighbourhoods and about 200k
+current BGT surfaces.
 
 ### Quirks worth knowing
 
 * **PDOK OGC APIs cap `limit` at 1000** and return no `numberMatched`, so the
   client follows `next` links until they stop.
+* **The BGT is a versioned register and its API returns every version.**
+  About two rows in three are superseded versions of an object that is still
+  there, all with `status = bestaand`, so summing their areas makes a city
+  look almost entirely paved. `eind_registratie IS NULL`, passed as a
+  `cql2-text` filter, selects the current version and cuts the download to a
+  third. BAG, the CBS grid and the CBS neighbourhoods have no such problem;
+  this was checked for each of them.
 * **The neighbourhood statistics are WFS only**, and that service ignores
   `cql_filter`, so a bounding box is the only filter and neighbouring
   municipalities come back too (`load_buurten` clips). It is requested in RD

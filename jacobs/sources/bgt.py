@@ -6,9 +6,14 @@ country at building-outline precision, so for each hexagon we can measure how
 much of the paved public space is carriageway and parking, and how much is
 sidewalk and cycle path.
 
-Served by PDOK's BGT OGC API. Only parts at ground level
-(`relatieve_hoogteligging` 0) count, so bridges and tunnels do not add a second
-layer of surface on top of the street below them.
+Served by PDOK's BGT OGC API, with two traps worth knowing:
+
+* The BGT is a *versioned* register and the API returns every version of an
+  object by default, about three rows for each one that is current. Summing
+  their areas gives a city almost entirely paved. `eind_registratie IS NULL`
+  selects the current version, which also cuts the download to a third.
+* Only parts at ground level (`relatieve_hoogteligging` 0) count, so bridges and
+  tunnels do not add a second layer of surface over the street below them.
 """
 
 from __future__ import annotations
@@ -18,7 +23,12 @@ import geopandas as gpd
 from jacobs.config import City
 from jacobs.sources import bag, pdok
 
-PROPERTIES = ("lokaal_id", "functie", "fysiek_voorkomen", "relatieve_hoogteligging", "status")
+PROPERTIES = (
+    "lokaal_id", "functie", "fysiek_voorkomen", "relatieve_hoogteligging", "status",
+    "eind_registratie",
+)
+# Only the version of each object that is current.
+CURRENT_ONLY = {"filter-lang": "cql2-text", "filter": "eind_registratie IS NULL"}
 
 # BGT `functie` -> who the surface is for. Cycle paths are kept apart from
 # footways: in a Dutch city, counting them as "car space" would be wrong, and
@@ -51,7 +61,7 @@ def fetch(city: City, force: bool = False) -> gpd.GeoDataFrame:
     bbox = pdok.city_bbox(bag.boundary(city))
     return pdok.fetch_items(
         "bgt", "wegdeel", bbox, city.raw_dir / "bgt" / "wegdeel.parquet",
-        properties=PROPERTIES, force=force, label="bgt wegdeel",
+        properties=PROPERTIES, params=CURRENT_ONLY, force=force, label="bgt wegdeel",
     )
 
 
@@ -62,6 +72,10 @@ def load(city: City) -> gpd.GeoDataFrame:
         raise SystemExit(f"Missing {path}. Run: python -m jacobs fetch {city.id} --source bgt")
 
     gdf = gpd.read_parquet(path)
+    # Belt and braces: the filter above should have done this, and paged reads
+    # of a changing collection can still repeat a row across page boundaries.
+    gdf = gdf[gdf["eind_registratie"].isna()]
+    gdf = gdf[~gdf["lokaal_id"].duplicated()]
     gdf = gdf[gdf["status"] == "bestaand"]
     gdf = gdf[gdf["relatieve_hoogteligging"].fillna(0) == 0]
     shape = bag.boundary(city).to_crs(4326).geometry.union_all()
