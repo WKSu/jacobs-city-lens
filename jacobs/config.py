@@ -22,6 +22,8 @@ class City:
     boundary: dict
     sources: dict
     study_areas: dict = field(default_factory=dict)
+    # Rotterdam scenes and places to look at, told in each tab before the indicators.
+    story: dict = field(default_factory=dict)
 
     @property
     def raw_dir(self) -> Path:

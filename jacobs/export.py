@@ -9,6 +9,12 @@ site/public/data/<city>/figure_ground.json   buildings + streets around each stu
 site/public/data/<city>/links.geojson     street links with eyes-on-the-street metrics
 site/public/data/<city>/vacuums.geojson   border vacuums by type
 site/public/data/<city>/parks.geojson     parks with the uses around them
+site/public/data/<city>/places.json       every counted place, by group (compact points)
+site/public/data/<city>/addresses.json    every address location with its count (compact points)
+site/public/data/<city>/intersections.json   street intersections (compact points)
+
+The compact point files hold [dx, dy, ...] integers in 1e-5 degrees from an
+origin, so a city's hundred thousand addresses stay a small download.
 """
 
 from __future__ import annotations
@@ -30,11 +36,13 @@ from jacobs.metrics.registry import (
     METRICS,
     PARK_METRIC_IDS,
 )
+from jacobs.metrics.mixed_use import GROUP_NAMES, clean_places
 from jacobs.metrics.vacuums import LABELS as VACUUM_LABELS
 from jacobs.pipeline import load_raw
 
 SITE_DATA = ROOT / "site" / "public" / "data"
 FIGURE_GROUND_SIZE_M = 800
+POINT_SCALE = 1e5  # compact point files: integer steps of 1e-5 degrees (about 1 m)
 
 
 def _round(v, digits=4):
@@ -120,14 +128,48 @@ def _ring(coords, close):
     return "M" + "L".join(pts) + ("Z" if close else "")
 
 
+def compact_points(gdf: gpd.GeoDataFrame, origin: tuple[float, float]) -> np.ndarray:
+    """(n, 2) integer offsets from origin in 1e-5 degrees."""
+    xy = gdf.to_crs(4326).geometry.get_coordinates().to_numpy()
+    return np.round((xy - np.array(origin)) * POINT_SCALE).astype(int)
+
+
+def point_layers(city: City, boundary: shapely.Geometry, origin: tuple[float, float]) -> dict[str, dict]:
+    """The things each indicator counts, as points: places, addresses, intersections."""
+    places = clean_places(load_raw(city, "places")).to_crs(city.crs)
+    places = places[places.within(boundary)]
+    places = places.assign(geometry=places.geometry.representative_point())
+    group = places["group"].map({g: i for i, g in enumerate(GROUP_NAMES)}).to_numpy()
+    xy = compact_points(places, origin)
+    names = places["name"].fillna("").str.slice(0, 40).tolist()
+
+    addresses = load_raw(city, "addresses").to_crs(city.crs)
+    addresses = addresses[addresses.within(boundary)]
+    axy = pd.DataFrame(compact_points(addresses, origin), columns=["x", "y"])
+    counted = axy.groupby(["x", "y"]).size().reset_index(name="n")
+
+    nodes = gpd.read_parquet(city.processed_dir / "nodes.parquet")
+    nodes = nodes[(nodes["degree"] >= 3) & nodes.within(boundary)]
+    nxy = compact_points(nodes, origin)
+
+    return {
+        "places": {"groups": GROUP_NAMES, "points": np.column_stack([xy, group]).ravel().tolist(), "names": names},
+        "addresses": {"points": counted[["x", "y", "n"]].to_numpy().ravel().tolist()},
+        "intersections": {"points": nxy.ravel().tolist()},
+    }
+
+
 def run(city: City) -> None:
     out = SITE_DATA / city.id
     out.mkdir(parents=True, exist_ok=True)
     hexes = gpd.read_parquet(city.processed_dir / "hex.parquet")
     areas = gpd.read_parquet(city.processed_dir / "areas.parquet")
 
-    keep = ["h3", "land_ha", "study_area", "units", "places", *METRIC_IDS]
+    # Raw counts behind each hexagon's numbers, so the site can show how they are made.
+    counts = ["units", "places", "intersections", *(f"n_{g}" for g in GROUP_NAMES)]
+    keep = ["h3", "land_ha", "study_area", *counts, *METRIC_IDS]
     web = hexes[keep + ["geometry"]].copy()
+    web[counts] = web[counts].fillna(0).astype(int)
     for col in METRIC_IDS + ["land_ha"]:
         web[col] = web[col].round(4)
     _write_geojson(web, out / "hex.geojson")
@@ -143,10 +185,12 @@ def run(city: City) -> None:
     (out / "figure_ground.json").write_text(json.dumps(figure_ground(city, areas)))
 
     links = gpd.read_parquet(city.processed_dir / "eyes_links.parquet")
-    links = links.assign(geometry=links.geometry.simplify(1))
+    # length_m only between two intersections: Jacobs' block length (dead ends get none)
+    links = links.assign(geometry=links.geometry.simplify(1),
+                         length_m=links["length"].round(0).where(links["ends"] == "intersection-intersection"))
     for col in LINK_METRIC_IDS:
         links[col] = links[col].round(3)
-    _write_geojson(links[[*LINK_METRIC_IDS, "geometry"]], out / "links.geojson")
+    _write_geojson(links[[*LINK_METRIC_IDS, "length_m", "geometry"]], out / "links.geojson")
 
     vac = gpd.read_parquet(city.processed_dir / "vacuums.parquet")
     vac = vac.assign(geometry=vac.geometry.simplify(5), area_ha=vac["area_ha"].round(1))
@@ -161,12 +205,19 @@ def run(city: City) -> None:
     _write_geojson(parks[[*park_cols, "geometry"]], out / "parks.geojson")
 
     bounds = hexes.to_crs(4326).total_bounds
+    origin = (round(float(bounds[0]), 3), round(float(bounds[1]), 3))
+    city_shape = load_raw(city, "boundary").to_crs(city.crs).geometry.union_all()
+    for name, layer in point_layers(city, city_shape, origin).items():
+        (out / f"{name}.json").write_text(json.dumps({"origin": origin, "scale": POINT_SCALE, **layer},
+                                                     separators=(",", ":")))
     meta = {
         "id": city.id, "name": city.name, "country": city.country,
         "h3_resolution": city.h3_resolution,
         "sources": {"overture_release": city.source_config("overture").get("release")},
         "bounds": [_round(v, 5) for v in bounds],
         "generators": GENERATORS,
+        "story": city.story,
+        "place_groups": GROUP_NAMES,
         "metrics": METRICS,
         "areas": area_profiles(hexes, areas),
         "city_median": {m: _round(hexes[m].median()) for m in METRIC_IDS},

@@ -163,4 +163,4 @@ def compute(grid: gpd.GeoDataFrame, segments: gpd.GeoDataFrame, land: shapely.Ge
     path_nodes["h3"] = assign_points(path_nodes, resolution)
     n_path = path_nodes[path_nodes["degree"] >= 3].groupby("h3").size()
     out["path_intersection_density"] = n_path.reindex(out.index).fillna(0) / land_km2
-    return out, {"links": link_gdf, "blocks": block_gdf}
+    return out, {"links": link_gdf, "blocks": block_gdf, "nodes": nodes}

@@ -5,6 +5,7 @@ Outputs: data/processed/<city>/hex.parquet      one row per hexagon, all metrics
          data/processed/<city>/areas.parquet    study area polygons
          data/processed/<city>/links.parquet    street links (for maps)
          data/processed/<city>/blocks.parquet   street blocks (for maps)
+         data/processed/<city>/nodes.parquet    street connectors with their degree (for maps)
          data/processed/<city>/eyes_links.parquet   street links with eyes-on-the-street metrics
          data/processed/<city>/vacuums.parquet  border vacuums; vacuum_decay.parquet the distance bands
          data/processed/<city>/parks.parquet    parks with the uses around them

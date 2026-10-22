@@ -11,6 +11,9 @@ The pipeline is the same for every city. A city is one YAML file.
    * `study_areas`: neighbourhoods selected by Overture division `subtype` + `name`.
      Run `fetch` first and list the names in `data/raw/<id>/overture/divisions.parquet`,
      because Overture's neighbourhood levels differ between countries.
+   * `story` (optional): the city's own scene for each tab and the places the map can fly
+     to (`center` is `[lon, lat]`), plus the districts used in the density quiz. Jacobs'
+     ideas and the book's scenes are shared by every city and live in `site/src/stories.js`.
 3. **Run the pipeline:**
 
    ```sh
