@@ -6,7 +6,9 @@ import { renderVacuums } from "./vacuums.js";
 import { renderParks } from "./parks.js";
 import { renderClocks } from "./clocks.js";
 import { onThemeChange } from "./theme.js";
-import { STORIES } from "./stories.js";
+import { STORIES, FIT_LABEL } from "./stories.js";
+import { computeTests, renderTest } from "./tests.js";
+import { renderChain } from "./chain.js";
 import { renderModel } from "./models.js";
 import { explainHex } from "./explain.js";
 
@@ -36,13 +38,44 @@ async function loadCity(id) {
   state.city = city;
   state.hex = null;
   state.data = { hex, areas, water, fg, links, vacuums, parks, clocks };
+  state.tests = computeTests(city, hex);
+  // The pipeline's thresholds when the data has them, so the map and the explainer agree.
+  city.conditionThresholds = city.conditions
+    ? Object.fromEntries(city.conditions.conditions.map((c) => [c.metric, c.threshold])) : state.tests.thresholds;
+  addTogether(city, hex);
   hexMap.onHexClick = (p) => { state.hex = p; explainHex($("explain"), state.generator, p, city); };
   await hexMap.load(city, state.data);
   loadGround(id);
+  renderChain($("chain"), (g) => {
+    selectGenerator(g);
+    $("generators").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  });
   renderTabs();
   renderCharts();
   renderMethod();
 }
+
+// "All four together" is a tab of its own, built in the browser from the four
+// conditions (tests.js), so it needs no extra data.
+const TOGETHER = { id: "together", label: "All four together", chapter: 7,
+  summary: "Jacobs' central claim: the four conditions work only in combination." };
+const TOGETHER_METRIC = {
+  id: "conditions_met", generator: "together", label: "Conditions met", unit: "of 4", format: "d",
+  direction: "higher", tier: "local", breaks: [1, 2, 3, 4], classes: ["0", "1", "2", "3", "4"],
+  description: "How many of the four conditions the hexagon meets: mix of uses, corners per km², mix of building ages and homes per hectare of building land, each counted when the hexagon is in Rotterdam's top 40% for it.",
+  source: "BAG, CBS and Overture, as in the four tabs",
+};
+
+function addTogether(city, hex) {
+  if (!city.generators.some((g) => g.id === TOGETHER.id)) {
+    const at = city.generators.findIndex((g) => g.id === "concentration") + 1;
+    city.generators.splice(at, 0, TOGETHER);
+  }
+  city.distributions.conditions_met = hex.features.map((f) => f.properties.conditions_met)
+    .filter((v) => typeof v === "number").sort((a, b) => a - b);
+}
+
+const metricsFor = (id) => (id === TOGETHER.id ? [TOGETHER_METRIC] : state.city.metrics.filter((m) => m.generator === id));
 
 // Compact point files: [dx, dy, extra...] integers from an origin (see jacobs/export.py).
 function decodePoints(file, stride, props) {
@@ -89,8 +122,19 @@ function renderStory(g) {
   }
   $("story-counts").textContent = story.counts || "";
   $("story-honest").textContent = story.honest ? `Limits: ${story.honest}` : "";
+  $("story-fit").innerHTML = story.fit ? `<span class="fit fit-${story.fit}"></span>${FIT_LABEL[story.fit]}` : "";
+  $("story-measure-text").textContent = story.measure || "";
+  $("test-city").textContent = city.name;
+  renderTest($("story-test"), tooltip, g.id, state.tests, city);
+  $("story-test-block").hidden = $("story-test").hidden;
   state.redrawModel = renderModel(story.model, $("story-model"), { city, data });
+  $("story-model-col").hidden = $("story-model").hidden;
   $("story").classList.toggle("no-model", $("story-model").hidden);
+  let n = 0;
+  document.querySelectorAll("#generators .step").forEach((h) => {
+    const box = h.closest("[hidden]");
+    if (!box) h.querySelector(".num").textContent = ++n;
+  });
 }
 
 function renderTabs() {
@@ -115,7 +159,7 @@ function selectGenerator(id) {
   $("generator-summary").textContent = g.summary;
   renderStory(g);
   explainHex($("explain"), id, state.hex, city);
-  const metrics = city.metrics.filter((m) => m.generator === id);
+  const metrics = metricsFor(id);
   const buttons = $("metric-buttons");
   if (!metrics.length) {
     buttons.innerHTML = `<p class="pending-note">Not measured yet${g.status ? `: ${g.status}` : ""}.</p>`;
@@ -124,14 +168,15 @@ function selectGenerator(id) {
   buttons.innerHTML = metrics.map((m) =>
     `<button class="chip" role="radio" data-m="${m.id}" aria-checked="false">${m.label}</button>`).join("");
   buttons.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => selectMetric(b.dataset.m)));
-  selectMetric(metrics[0].id);
+  const lead = STORIES[id]?.lead;
+  selectMetric(metrics.some((m) => m.id === lead) ? lead : metrics[0].id);
 }
 
 function selectMetric(id) {
-  const m = state.city.metrics.find((x) => x.id === id);
+  const m = metricsFor(state.generator).find((x) => x.id === id);
   state.metric = m;
   $("metric-buttons").querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-checked", b.dataset.m === id));
-  hexMap.setMetric(m, state.city.metrics.filter((x) => x.generator === m.generator));
+  hexMap.setMetric(m, metricsFor(m.generator));
   hexMap.legend($("legend"));
   $("metric-description").textContent = m.description;
   $("metric-source").textContent = `Source: ${m.source}. ${
@@ -147,6 +192,7 @@ function renderCharts() {
   renderVacuums($("vacuum-chart"), $("vacuum-controls"), tooltip, city);
   renderParks($("park-chart"), $("park-controls"), $("park-legend"), tooltip, city, data.parks);
   renderClocks($("clock-chart"), $("clock-controls"), $("clock-legend"), tooltip, city, data.clocks);
+  renderTest($("story-test"), tooltip, state.generator, state.tests, city);
 }
 
 function renderMethod() {

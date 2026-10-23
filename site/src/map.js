@@ -177,7 +177,7 @@ export class HexMap {
     this.generatorMetrics = generatorMetrics;
     if (!this.map || !this.map.isStyleLoaded()) return;
     const values = this.city.distributions[metric.id] || [];
-    this.breaks = breaks(values, 7);
+    this.breaks = metric.breaks || breaks(values, 7);
     const onParks = metric.layer === "parks";
     const show = (id, on) => this.map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
     const ground = GROUND[metric.generator];
@@ -193,7 +193,7 @@ export class HexMap {
       this.map.setPaintProperty("parks", "fill-color", colorExpr(metric.id, this.breaks));
       return;
     }
-    this.map.setPaintProperty("hex", "fill-color", colorExpr(metric.id, this.breaks));
+    this.map.setPaintProperty("hex", "fill-color", colorExpr(metric.id, this.breaks, metric.classes && classColors(metric.classes.length)));
     // Street-level metrics: hexagons fade out as single streets fade in.
     this.map.setPaintProperty("hex", "fill-opacity", metric.links || ground
       ? ["interpolate", ["linear"], ["zoom"], LINK_ZOOM - 1, 0.92, LINK_ZOOM, ground ? 0.08 : 0.15] : 0.92);
@@ -294,6 +294,14 @@ export class HexMap {
 
   legend(el) {
     const m = this.metric;
+    if (m.classes) {
+      const colors = classColors(m.classes.length);
+      el.innerHTML = `<div class="legend-title">${m.label}${m.unit ? ` <span class="source">(${m.unit})</span>` : ""}</div>
+        <div class="legend-scale">${colors.map((c) => `<span style="background:${c}"></span>`).join("")}</div>
+        <div class="legend-ticks">${m.classes.map((t) => `<span>${t}</span>`).join("")}</div>
+        <div class="legend-empty"><i></i> left out: little land or missing data</div>`;
+      return;
+    }
     const f = formatter(m);
     const colors = sequential();
     const ticks = [];
@@ -339,6 +347,12 @@ function groundLegend(generator) {
     keys += `<div class="ground-sub">Street between corners</div>` + cols.map((c, i) => `<span class="key"><i class="kline" style="background:${c}"></i>${labels[i]}</span>`).join("");
   }
   return `<div class="ground-legend"><div class="ground-title">Zoom in to see what is counted</div>${keys}</div>`;
+}
+
+// A few classes spread over the full ramp, rather than its lightest steps.
+function classColors(n) {
+  const ramp = sequential();
+  return Array.from({ length: n }, (_, i) => ramp[Math.round((i * (ramp.length - 1)) / (n - 1))]);
 }
 
 function colorExpr(id, cuts, palette) {

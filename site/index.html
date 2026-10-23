@@ -16,21 +16,36 @@
         <p class="lede">
           Jane Jacobs named four conditions a city district needs to generate diversity:
           mixed primary uses, short blocks, buildings of different ages, and enough people.
-          This site measures them with open data, hexagon by hexagon, and compares the old
-          districts she would have recognised with the planned ones she argued against.
+          This site is a way to learn how she looked at a city: each idea, the scene she saw it
+          in, how it works, and an honest test of what Rotterdam's open data can and can't show
+          about it.
         </p>
         <label class="city-picker">City <select id="city"></select></label>
       </div>
     </header>
 
     <main class="wrap">
+      <section id="chain-section" aria-labelledby="h-chain">
+        <h2 id="h-chain">How Jacobs saw a city</h2>
+        <p class="section-intro">
+          Jacobs started from the street: who is on it, when, and why. She argued that four physical
+          conditions bring people out at all hours, that those people keep shops and small firms
+          going, and that busy streets are safer and better loved. Data can see the buildings and
+          streets well. It can't see people, so the middle of the chain is described in words,
+          and each tab says plainly how far the data gets.
+        </p>
+        <div id="chain"></div>
+      </section>
+
       <section id="generators" aria-labelledby="h-map">
-        <h2 id="h-map">The four generators, and what surrounds them</h2>
+        <h2 id="h-map">Each idea, step by step</h2>
         <div class="tabs" role="tablist" id="generator-tabs"></div>
         <div class="story" id="story" role="tabpanel">
           <div class="story-text">
             <p class="generator-summary" id="generator-summary"></p>
+            <h3 class="step"><span class="num"></span>The claim</h3>
             <p class="story-idea" id="story-idea"></p>
+            <h3 class="step"><span class="num"></span>What she saw</h3>
             <figure class="story-scene">
               <blockquote id="story-scene"></blockquote>
               <figcaption id="story-scene-source"></figcaption>
@@ -41,12 +56,24 @@
               <div class="story-places" id="story-places"></div>
             </div>
           </div>
-          <div class="story-model" id="story-model"></div>
+          <div class="story-model-col" id="story-model-col">
+            <h3 class="step"><span class="num"></span>How it works</h3>
+            <div class="story-model" id="story-model"></div>
+          </div>
         </div>
-        <div class="story-measure">
-          <h3>How the map measures it</h3>
-          <p id="story-counts"></p>
+        <div class="story-steps">
+          <div class="story-measure">
+            <h3 class="step"><span class="num"></span>Can the data see it?</h3>
+            <p class="fit-line" id="story-fit"></p>
+            <p id="story-measure-text"></p>
+          </div>
+          <div class="story-test" id="story-test-block">
+            <h3 class="step"><span class="num"></span>What <span id="test-city">the city</span> shows</h3>
+            <div id="story-test"></div>
+          </div>
         </div>
+        <h3 class="step explore"><span class="num"></span>Explore the map</h3>
+        <p class="story-counts" id="story-counts"></p>
         <div class="metric-row" id="metric-buttons" role="radiogroup" aria-label="Metric"></div>
         <div class="map-panel">
           <div id="map" aria-label="Map of the selected metric by hexagon"></div>
@@ -96,8 +123,10 @@
         <p class="section-intro">
           Jacobs saw that rail yards, expressways, campuses and big parks form "dead ends" for the
           streets around them (ch. 14). Each panel counts activity on ordinary land in 50 m bands
-          from the edge of one kind of vacuum. The dashed line is the city-wide level; a line that
-          climbs from left to right is a border vacuum at work.
+          from the edge of one kind of vacuum. The dashed line is the city-wide level. A line that
+          climbs from left to right in places per hectare looks like a border vacuum, but switch to
+          places per 100 addresses: near most edges it stays flat, so the dip comes mostly from
+          fewer homes near the edge, not from people avoiding the shops there.
         </p>
         <div class="metric-row" id="vacuum-controls" role="radiogroup" aria-label="Measure"></div>
         <div class="sm-grid" id="vacuum-chart"></div>

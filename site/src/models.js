@@ -125,6 +125,7 @@ function eyes(el) {
       <span class="break"></span>
       <span>Street wall <b class="sm">${Math.round(wall * 100)}%</b></span>
       <span>Buildings fronting <b class="sm">${(list.length / 3).toFixed(1)}</b> per 100 m</span>
+      <span>Front doors <b class="sm">${(list.length / 3).toFixed(1)}</b> per 100 m</span>
       <span>Places along the street <b class="sm">${(S.ground === "shops" ? list.length / 3 : 0).toFixed(1)}</b> per 100 m</span>`;
   }
   draw();
