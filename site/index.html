@@ -5,24 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Jacobs City Lens</title>
     <meta name="description" content="Jane Jacobs' conditions for city diversity, measured with open data." />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M8 1l6 3.5v7L8 15l-6-3.5v-7z%22 fill=%22%232a78d6%22/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Cpath d=%22M8 1l6 3.5v7L8 15l-6-3.5v-7z%22 fill=%22%2300811f%22/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <header class="masthead">
-      <div class="wrap">
-        <p class="eyebrow">The Death and Life of Great American Cities, 1961</p>
-        <h1>Jacobs City Lens</h1>
-        <p class="lede">
-          Jane Jacobs named four conditions a city district needs to generate diversity:
-          mixed primary uses, short blocks, buildings of different ages, and enough people.
-          This site is a way to learn how she looked at a city: each idea, the scene she saw it
-          in, how it works, and an honest test of what Rotterdam's open data can and can't show
-          about it.
-        </p>
+      <div class="wrap masthead-inner">
+        <div>
+          <p class="eyebrow">The Death and Life of Great American Cities, 1961</p>
+          <h1>Jacobs City Lens</h1>
+          <p class="lede">
+            Jane Jacobs named four conditions a city district needs to generate diversity:
+            mixed primary uses, short blocks, buildings of different ages, and enough people.
+            This site is a way to learn how she looked at a city: each idea, the scene she saw it
+            in, how it works, and an honest test of what the city's open data can and can't show
+            about it.
+          </p>
+        </div>
         <label class="city-picker">City <select id="city"></select></label>
       </div>
+      <div class="flag" aria-hidden="true"></div>
     </header>
+
+    <nav class="section-nav" aria-label="Sections">
+      <div class="wrap">
+        <a href="#chain-section">How she saw it</a>
+        <a href="#generators">Each idea</a>
+        <a href="#profiles">Six districts</a>
+        <a href="#figure-ground">Figure-ground</a>
+        <a href="#density">Density</a>
+        <a href="#vacuums">Border vacuums</a>
+        <a href="#parks">Parks</a>
+        <a href="#clocks">Opening hours</a>
+        <a href="#method">Method</a>
+      </div>
+    </nav>
 
     <main class="wrap">
       <section id="chain-section" aria-labelledby="h-chain">
@@ -39,6 +56,10 @@
 
       <section id="generators" aria-labelledby="h-map">
         <h2 id="h-map">Each idea, step by step</h2>
+        <p class="section-intro">
+          Every tab follows the same six steps: her claim, the scene she saw, how it works, whether the
+          data can see it, what the city shows, and a map to explore.
+        </p>
         <div class="tabs" role="tablist" id="generator-tabs"></div>
         <div class="story" id="story" role="tabpanel">
           <div class="story-text">
@@ -89,7 +110,17 @@
       </section>
 
       <section id="profiles" aria-labelledby="h-profiles">
-        <h2 id="h-profiles">Old districts and planned ones</h2>
+        <h2 id="h-profiles">Six districts, four conditions</h2>
+        <p class="section-intro">
+          Each square is one hexagon of about 10 ha inside the district. It is filled when that hexagon
+          is in the city's top 40% for the condition, the same test as the "All four together" tab.
+          The bars on the right count shops, cafés and other places per hectare: a visible trace of
+          street life, not a count of people. Districts are sorted by how many conditions their
+          hexagons meet on average.
+        </p>
+        <div id="scorecard"></div>
+
+        <h3 class="sub-h">Old districts and planned ones, measure by measure</h3>
         <p class="section-intro">
           Each dot is a district's median hexagon, placed by where it falls among all hexagons in the
           city. Scales are flipped where needed, so further right is always closer to what Jacobs asked
@@ -97,6 +128,7 @@
         </p>
         <div class="legend-row" id="profile-legend"></div>
         <div id="profile-chart"></div>
+        <button type="button" class="more-btn" id="profile-more" aria-expanded="false"></button>
         <details class="table-view">
           <summary>Show as table</summary>
           <div id="profile-table"></div>
