@@ -112,7 +112,7 @@ def run(city: City) -> gpd.GeoDataFrame:
     mix_metrics = mixed_use.compute(grid, places, density_metrics["units"], city.h3_resolution)
     print("[pipeline] mixed use done", flush=True)
 
-    eyes_metrics, eyes_links = eyes.compute(grid, street_layers["links"], buildings, places)
+    eyes_metrics, eyes_links = eyes.compute(grid, street_layers["links"], buildings, places, addresses)
     print("[pipeline] eyes on the street done", flush=True)
     # the city's land, net of water (the grid's union overshoots the boundary)
     city_land = boundary.to_crs(city.crs).geometry.union_all().difference(
