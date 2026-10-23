@@ -1,16 +1,20 @@
 import { select, scaleLinear } from "d3";
 import { roleColor, ROLE_LABEL } from "./theme.js";
 import { withUnit } from "./format.js";
+import { STORIES } from "./stories.js";
 
 // Dot plot: one row per metric, x = city percentile (oriented so right = more
-// Jacobsian), one dot per study area coloured by role.
-export function renderProfile(el, legendEl, tableEl, tooltip, city) {
+// Jacobsian), one dot per study area coloured by role. Unless showAll, only each
+// idea's lead measure is drawn, so the chart reads at a glance.
+export function renderProfile(el, legendEl, tableEl, tooltip, city, showAll = false) {
   const metrics = city.metrics.filter((m) => (m.layer ?? "hex") === "hex");
   const generators = city.generators.filter((g) => metrics.some((m) => m.generator === g.id));
   const rows = [];
   for (const g of generators) {
+    const own = metrics.filter((m) => m.generator === g.id);
+    const lead = own.find((m) => m.id === STORIES[g.id]?.lead) || own[0];
     rows.push({ type: "group", g });
-    for (const m of metrics.filter((m) => m.generator === g.id)) rows.push({ type: "metric", m });
+    for (const m of showAll ? own : [lead]) rows.push({ type: "metric", m });
   }
 
   const rowH = 30, groupH = 28, labelW = 300, right = 24, top = 24;

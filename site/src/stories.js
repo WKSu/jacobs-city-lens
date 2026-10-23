@@ -40,7 +40,7 @@ export const STORIES = {
     idea: "A district needs buildings of many ages, including plenty of old, plain ones. Only old buildings have rents low enough for new and marginal businesses.",
     scene: "\"Old ideas can sometimes use new buildings. New ideas must use old buildings.\"",
     chapter: 10,
-    model: null,
+    model: "rents",
     lead: "age_diversity",
     fit: "proxy",
     measure: "The building register gives the construction year of every unit, so the mix of ages is measured well. Jacobs cared about age because of rent, and rents are not in the data. The spread of home values is the nearest stand-in.",

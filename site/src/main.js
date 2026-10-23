@@ -11,12 +11,14 @@ import { computeTests, renderTest } from "./tests.js";
 import { renderChain } from "./chain.js";
 import { renderModel } from "./models.js";
 import { explainHex } from "./explain.js";
+import { renderScorecard } from "./scorecard.js";
 
 const base = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
 const tooltip = $("tooltip");
 const hexMap = new HexMap($("map"), tooltip);
-const state = { generator: "short_blocks", metric: null, city: null, data: null, hex: null, redrawModel: null };
+const state = { generator: "short_blocks", metric: null, city: null, data: null, hex: null, redrawModel: null, profileAll: false };
+const smooth = () => (matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
 
 async function getJSON(path) {
   const res = await fetch(`${base}data/${path}`);
@@ -46,13 +48,15 @@ async function loadCity(id) {
   hexMap.onHexClick = (p) => { state.hex = p; explainHex($("explain"), state.generator, p, city); };
   await hexMap.load(city, state.data);
   loadGround(id);
-  renderChain($("chain"), (g) => {
-    selectGenerator(g);
-    $("generators").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-  });
+  renderChain($("chain"), openTab);
   renderTabs();
   renderCharts();
   renderMethod();
+}
+
+function openTab(g) {
+  selectGenerator(g);
+  $("generators").scrollIntoView({ behavior: smooth() });
 }
 
 // "All four together" is a tab of its own, built in the browser from the four
@@ -117,7 +121,7 @@ function renderStory(g) {
     $("story-places").querySelectorAll(".place-btn").forEach((b) => b.addEventListener("click", () => {
       const p = scene.places[+b.dataset.i];
       hexMap.flyTo(p.center, p.zoom);
-      $("map").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+      $("map").scrollIntoView({ behavior: smooth(), block: "center" });
     }));
   }
   $("story-counts").textContent = story.counts || "";
@@ -139,13 +143,14 @@ function renderStory(g) {
 
 function renderTabs() {
   const { city } = state;
+  const fit = (g) => (STORIES[g.id]?.fit ? `<span class="fit fit-${STORIES[g.id].fit}" title="${FIT_LABEL[STORIES[g.id].fit]}"></span>` : "");
   const tab = (g) =>
     `<button class="tab${g.status ? " pending" : ""}" role="tab" data-g="${g.id}" aria-selected="${g.id === state.generator}">
-      ${g.label}<span class="chapter">ch. ${g.chapter}</span></button>`;
+      ${fit(g)}${g.label}<span class="chapter">ch. ${g.chapter}</span></button>`;
   const generators = city.generators.filter((g) => g.kind !== "chapter");
   const chapters = city.generators.filter((g) => g.kind === "chapter");
-  $("generator-tabs").innerHTML = generators.map(tab).join("") +
-    (chapters.length ? `<span class="tab-divider" aria-hidden="true"></span>${chapters.map(tab).join("")}` : "");
+  $("generator-tabs").innerHTML = `<span class="tab-group">Conditions</span>${generators.map(tab).join("")}` +
+    (chapters.length ? `<span class="tab-divider" aria-hidden="true"></span><span class="tab-group">Also in the book</span>${chapters.map(tab).join("")}` : "");
   $("generator-tabs").querySelectorAll(".tab").forEach((b) =>
     b.addEventListener("click", () => selectGenerator(b.dataset.g)));
   selectGenerator(state.generator);
@@ -156,6 +161,8 @@ function selectGenerator(id) {
   state.generator = id;
   const g = city.generators.find((x) => x.id === id);
   $("generator-tabs").querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", b.dataset.g === id));
+  const sel = $("generator-tabs").querySelector('[aria-selected="true"]');
+  if (sel) $("generator-tabs").scrollLeft = sel.offsetLeft - 16;
   $("generator-summary").textContent = g.summary;
   renderStory(g);
   explainHex($("explain"), id, state.hex, city);
@@ -186,8 +193,12 @@ function selectMetric(id) {
 
 function renderCharts() {
   const { city, data } = state;
-  renderProfile($("profile-chart"), $("profile-legend"), $("profile-table"), tooltip, city);
-  renderFigureGround($("fg-grid"), city, data.fg);
+  renderScorecard($("scorecard"), tooltip, city, data.hex, openTab);
+  renderProfile($("profile-chart"), $("profile-legend"), $("profile-table"), tooltip, city, state.profileAll);
+  const total = city.metrics.filter((m) => (m.layer ?? "hex") === "hex").length;
+  $("profile-more").textContent = state.profileAll ? "Show key measures only" : `Show all ${total} measures`;
+  $("profile-more").setAttribute("aria-expanded", state.profileAll);
+  renderFigureGround($("fg-grid"), city, data.fg, data.hex);
   renderDensity($("density-chart"), $("density-intro"), tooltip, city);
   renderVacuums($("vacuum-chart"), $("vacuum-controls"), tooltip, city);
   renderParks($("park-chart"), $("park-controls"), $("park-legend"), tooltip, city, data.parks);
@@ -223,7 +234,26 @@ function renderMethod() {
     project's <code>docs/</code> folder for definitions and data sources.</p>`;
 }
 
+// Highlight the section in view in the sticky navigation.
+function watchSections() {
+  const links = [...document.querySelectorAll(".section-nav a")];
+  const seen = new Map();
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) seen.set(e.target.id, e.isIntersecting);
+    const current = links.find((a) => seen.get(a.hash.slice(1)));
+    links.forEach((a) => a.classList.toggle("active", a === current));
+    if (current) current.parentElement.scrollLeft = current.offsetLeft - 16;
+  }, { rootMargin: "-45% 0px -50% 0px" });
+  links.forEach((a) => { const s = document.querySelector(a.hash); if (s) io.observe(s); });
+}
+
 async function init() {
+  watchSections();
+  document.querySelectorAll(".belongs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
+  $("profile-more").addEventListener("click", () => {
+    state.profileAll = !state.profileAll;
+    renderCharts();
+  });
   const cities = await getJSON("cities.json");
   const params = new URLSearchParams(location.search);
   const first = cities.find((c) => c.id === params.get("city"))?.id || cities[0].id;

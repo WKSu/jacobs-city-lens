@@ -56,7 +56,7 @@ export function renderClocks(el, controlsEl, legendEl, tooltip, city, clocks) {
         const share = places ? counts[d][h] / places : 0;
         cells.append("rect")
           .attr("x", x(h)).attr("y", y(d)).attr("width", cw + 0.5).attr("height", ch + 0.5)
-          .attr("fill", share > 0 ? color(share) : "var(--surface-2)")
+          .attr("fill", share > 0 ? color(share) : "var(--hex-empty)")
           .on("mousemove", (e) => {
             tooltip.innerHTML = `<div class="t-title">${area.label}</div><table>
               <tr><td>${clocks.days[d]} ${String(h).padStart(2, "0")}:00</td>

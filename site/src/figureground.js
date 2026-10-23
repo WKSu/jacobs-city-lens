@@ -1,15 +1,17 @@
 import { roleColor, ROLE_LABEL } from "./theme.js";
-import { withUnit } from "./format.js";
+import { CONDITIONS } from "./tests.js";
+import { districtRows } from "./scorecard.js";
 
-const STATS = ["intersection_density", "units_per_ha", "use_mix"];
-
-export function renderFigureGround(el, city, fg) {
-  const metrics = Object.fromEntries(city.metrics.map((m) => [m.id, m]));
-  const order = [...city.areas].sort((a, b) => (a.role === b.role ? 0 : a.role === "jacobs" ? -1 : 1));
+// Same-scale plans of each district, in the scorecard's order, each with the
+// four conditions underneath (filled when most of its hexagons meet one).
+export function renderFigureGround(el, city, fg, hex) {
+  const rows = districtRows(city, hex);
+  const order = rows.length ? rows.map((r) => r.a) : city.areas;
   el.innerHTML = order.map((a) => {
     const d = fg[a.id];
     if (!d) return "";
     const s = d.size_m;
+    const r = rows.find((x) => x.a.id === a.id);
     return `<figure class="fg-card">
       <svg viewBox="0 0 ${s} ${s}" role="img" aria-label="Buildings and streets in ${a.label}, ${s} by ${s} metres">
         <path d="${d.streets.join(" ")}" fill="none" stroke="var(--fg-street)" stroke-width="2" />
@@ -22,7 +24,7 @@ export function renderFigureGround(el, city, fg) {
         <h3>${a.label}</h3>
         <span class="role"><span class="dot" style="width:10px;height:10px;border-radius:50%;background:${roleColor(a.role)}"></span>${ROLE_LABEL[a.role]}</span>
         <p class="note">${a.note}</p>
-        <div class="fg-stats">${STATS.map((id) => `<div><b>${withUnit({ ...metrics[id], unit: "share" }, a.metrics[id].median)}</b>${metrics[id].label}${metrics[id].unit === "0–1" ? "" : ` (${metrics[id].unit})`}</div>`).join("")}</div>
+        ${r ? `<ul class="fg-conds">${CONDITIONS.map((c) => `<li class="${r.share(c) >= 0.5 ? "on" : ""}">${c.label}</li>`).join("")}</ul>` : ""}
       </figcaption>
     </figure>`;
   }).join("");

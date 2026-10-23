@@ -19,9 +19,13 @@ function text(parent, x, y, str, attrs = {}) {
   return t;
 }
 
-function frame(el, title, kind, body) {
+// Every model has the same parts: a question, one line on what to try, the
+// picture, and one sentence that says what the reader is seeing right now.
+function frame(el, title, kind, tryThis, body) {
   const label = kind === "data" ? "City data" : "Sketch, not measured";
-  el.innerHTML = `<div class="model-hd"><h3>${title}</h3><span class="model-kind ${kind}">${label}</span></div>${body}`;
+  el.innerHTML = `<div class="model-hd"><h3>${title}</h3><span class="model-kind ${kind}">${label}</span></div>
+    <p class="model-try"><b>Try it:</b> ${tryThis}</p>${body}<p class="model-take" aria-live="polite"></p>`;
+  return el.querySelector(".model-take");
 }
 
 // Segmented control: one pressed button at a time.
@@ -44,53 +48,46 @@ export function renderModel(kind, el, ctx) {
   return fn(el, ctx);
 }
 
-const MODELS = { eyes, day: (el) => day(el, "street"), "day-park": (el) => day(el, "park"), grid, quiz, walk };
+const MODELS = { eyes, day: (el) => day(el, "street"), "day-park": (el) => day(el, "park"), grid, quiz, walk, rents };
 
 /* Eyes on the street: who can see a person walking along a 300 m street. */
 function eyes(el) {
-  const S = { grain: 6, ground: "homes", setback: 0, gaps: 0 };
-  frame(el, "Who can see you?", "sketch", `
+  const S = { grain: 6, ground: "homes", setback: 0 };
+  const take = frame(el, "Who can see you?", "sketch",
+    "drag the walker along the street, then change the buildings. Each line is a window or door that can see the walker.", `
     <div class="model-controls">
-      ${seg("grain", "Buildings", [[6, "Narrow houses"], [18, "Medium"], [110, "Slabs"]], S.grain)}
+      ${seg("grain", "Buildings", [[6, "Narrow houses"], [110, "Long slabs"]], S.grain)}
+      ${seg("setback", "Front", [[0, "On the pavement"], [30, "30 m back"]], S.setback)}
       ${seg("ground", "Ground floor", [["homes", "Homes"], ["shops", "Shops"], ["blank", "Blank walls"]], S.ground)}
-      ${seg("setback", "Set back", [[0, "0 m"], [10, "10 m"], [30, "30 m"]], S.setback)}
-      ${seg("gaps", "Gaps", [[0, "None"], [1, "Car parks"]], S.gaps)}
     </div>
     <svg viewBox="0 0 640 262" role="img" aria-label="Plan of a 300 metre street with buildings on both sides. Lines link the walker to the windows and doors that can see them."></svg>
     <label class="model-ctl-label" for="eyes-walk">Walk along the street</label>
     <input type="range" id="eyes-walk" min="0" max="300" value="120">
-    <div class="model-out"></div>
-    <p class="model-note">Every window or door within 40 m counts, weighted by distance, and a shopkeeper counts double. The bottom row uses the map's own definitions.</p>`);
-  const svg = el.querySelector("svg"), out = el.querySelector(".model-out"), walk = el.querySelector("input");
+    <p class="model-note">A window or door counts if it is within 40 m; a shopkeeper counts double. On the map, the street wall and front doors per 100 m measure the same thing for real streets.</p>`);
+  const svg = el.querySelector("svg"), walk = el.querySelector("input");
   el.querySelectorAll(".seg").forEach((s) => segmented(s, (v) => { S[s.dataset.k] = isNaN(+v) ? v : +v; draw(); }));
   walk.addEventListener("input", draw);
   const PX = 2, X0 = 20, ROAD = 6, WALK = 3;
 
   function buildings() {
-    const list = [], gaps = [];
+    const list = [];
     for (const side of [-1, 1]) {
-      let x = side === 1 ? S.grain * 0.4 : 0, i = 0;
+      let x = side === 1 ? S.grain * 0.4 : 0;
       while (x < 300) {
-        if (S.gaps && i % 4 === 2) { gaps.push({ side, x }); x += 25; i++; continue; }
         const w = Math.min(S.grain, 300 - x);
         if (w > 2) list.push({ side, x, w, depth: S.grain > 50 ? 14 : 10 });
         x += w + (S.grain > 50 ? 12 : 0);
-        i++;
       }
     }
-    return { list, gaps };
+    return list;
   }
 
   function draw() {
-    const wx = +walk.value, { list, gaps } = buildings();
+    const wx = +walk.value, list = buildings();
     const Y = (m) => 128 + m * PX, X = (m) => X0 + m * PX;
     svg.textContent = "";
     svgEl("rect", { x: X0, y: Y(-ROAD - WALK), width: 300 * PX, height: (ROAD + WALK) * 2 * PX, fill: token("grid") }, svg);
     for (const s of [-1, 1]) svgEl("line", { x1: X0, x2: X0 + 300 * PX, y1: Y(s * ROAD), y2: Y(s * ROAD), stroke: token("border") }, svg);
-    for (const g of gaps) {
-      const y = g.side * (ROAD + WALK);
-      svgEl("rect", { x: X(g.x), y: g.side < 0 ? Y(y - 12) : Y(y), width: 25 * PX - 2, height: 12 * PX, fill: "none", stroke: token("text-muted"), "stroke-dasharray": "3 3" }, svg);
-    }
     const pts = [];
     list.forEach((b, bi) => {
       const yF = b.side * (ROAD + WALK + S.setback);
@@ -102,14 +99,13 @@ function eyes(el) {
       }
     });
     const wy = ROAD + WALK / 2;
-    let seenBy = 0, shops = 0;
+    let eyesOn = 0;
     const seen = new Set();
     for (const p of pts) {
       const d = Math.hypot(p.x - wx, p.y - wy);
       if (d < 40) {
-        seenBy += p.w * (1 - d / 40);
+        eyesOn++;
         seen.add(p.b);
-        if (p.shop) shops++;
         svgEl("line", { x1: X(p.x), y1: Y(p.y), x2: X(wx), y2: Y(wy), stroke: token("series-2"), "stroke-opacity": (0.15 + 0.6 * (1 - d / 40)).toFixed(2), "stroke-width": p.shop ? 1.6 : 0.8 }, svg);
       }
       svgEl("circle", { cx: X(p.x), cy: Y(p.y), r: p.shop ? 2.6 : 1.5, fill: p.shop ? token("series-2") : token("series-1") }, svg);
@@ -118,15 +114,11 @@ function eyes(el) {
     text(svg, X0, 256, "0 m");
     text(svg, X0 + 300 * PX, 256, "300 m", { "text-anchor": "end" });
 
-    // The map's measures for this street (both sides, 300 m).
-    const lined = ROAD + WALK + S.setback <= 20;
-    const wall = lined ? list.reduce((s, b) => s + b.w, 0) / 600 : 0;
-    out.innerHTML = `<span><b>${seenBy.toFixed(0)}</b> eyes on this spot</span><span><b>${seen.size}</b> buildings watching</span><span><b>${shops}</b> shopkeepers</span>
-      <span class="break"></span>
-      <span>Street wall <b class="sm">${Math.round(wall * 100)}%</b></span>
-      <span>Buildings fronting <b class="sm">${(list.length / 3).toFixed(1)}</b> per 100 m</span>
-      <span>Front doors <b class="sm">${(list.length / 3).toFixed(1)}</b> per 100 m</span>
-      <span>Places along the street <b class="sm">${(S.ground === "shops" ? list.length / 3 : 0).toFixed(1)}</b> per 100 m</span>`;
+    const verdict = eyesOn === 0 ? "Nobody can see you here."
+      : eyesOn < 15 ? "Only a few windows look onto this spot."
+        : "Plenty of people could see you here without meaning to.";
+    take.innerHTML = `${verdict} <b>${eyesOn}</b> windows and doors in <b>${seen.size}</b> buildings face this spot${
+      S.ground === "shops" ? ", and shopkeepers are watching all day" : ""}.`;
   }
   draw();
   return draw;
@@ -150,13 +142,13 @@ function day(el, mode) {
     ? { offices: "Ringed by offices", homes: "Ringed by homes", mixed: "Ringed by everything" }
     : { offices: "Office district", homes: "Housing estate", mixed: "Mixed street" };
   const on = new Set(presets.homes);
-  frame(el, park ? "Who is in the park, and when?" : "Fill the day", "sketch", `
+  const take = frame(el, park ? "Who is in the park, and when?" : "Who is on the street, and when?", "sketch",
+    `start from ${park ? "a park ringed by homes" : "a street of homes only"}, then tick other reasons to be there. Grey bands are hours when the ${park ? "park" : "street"} is nearly empty.`, `
     <div class="model-controls">${seg("preset", "Start from", Object.keys(presets).map((k) => [k, names[k]]), "homes")}</div>
     <div class="model-toggles">${USES.map((u) => `<label><input type="checkbox" data-u="${u.id}"><i class="sw" data-c="${u.c}"></i>${u.label}</label>`).join("")}</div>
     <svg viewBox="0 0 640 220" role="img" aria-label="Stacked area chart of people ${park ? "in the park" : "on the street"} by hour of the day, by reason for being there."></svg>
-    <div class="model-out"></div>
-    <p class="model-note">The hourly patterns are assumptions that show the mechanism. A measured version needs opening hours (planned, issue 6).</p>`);
-  const svg = el.querySelector("svg"), out = el.querySelector(".model-out");
+    <p class="model-note">The hourly patterns are made up to show the mechanism. The opening-hours chart further down shows the little real data there is.</p>`);
+  const svg = el.querySelector("svg");
   const presetSeg = el.querySelector(".seg");
   segmented(presetSeg, (v) => { on.clear(); presets[v].forEach((x) => on.add(x)); draw(); });
   el.querySelectorAll(".model-toggles input").forEach((i) => i.addEventListener("change", () => {
@@ -190,10 +182,11 @@ function day(el, mode) {
     for (const h of [0, 6, 12, 18, 23]) text(svg, x(h), B + 16, `${String(h).padStart(2, "0")}:00`, { "text-anchor": h === 0 ? "start" : h === 23 ? "end" : "middle" });
     text(svg, 4, T + 8, "people", { "font-size": 10 });
     const quiet = total.slice(6).filter((v) => v < QUIET).length;
-    const kinds = act.filter((u) => u.id !== "homes").length;
-    const mix = kinds > 1 ? Math.log(kinds) / Math.log(3) : 0;
-    out.innerHTML = `<span><b>${quiet}</b> of 18 waking hours (6:00 to midnight) ${park ? "with an empty park" : "with an empty street"}</span>
-      <span><b>${mix.toFixed(2)}</b> use mix across the three kinds, if places split evenly</span>`;
+    const where = park ? "park" : "street";
+    take.innerHTML = quiet === 0
+      ? `With ${act.length} reasons to be here, someone is around in every waking hour. This is Jacobs' point: each use fills the gaps the others leave.`
+      : `The ${where} is nearly empty for <b>${quiet}</b> of 18 waking hours (6:00 to midnight). ${
+        act.length < 4 ? "Add another reason to be here and watch the grey gaps close." : ""}`;
   }
   draw();
   return draw;
@@ -201,13 +194,12 @@ function day(el, mode) {
 
 /* Cut a new street: shortest routes between two corners of a grid. */
 function grid(el) {
-  frame(el, "Cut a new street", "sketch", `
-    <p class="model-lede">Click a dashed line to open a cross street, then count the shortest walks from A to B.</p>
+  const take = frame(el, "How many ways can you walk from A to B?", "sketch",
+    "click a dashed line to cut a new cross street through a long block. The coloured lines are some of the shortest walks.", `
     <svg viewBox="0 0 640 220" role="img" aria-label="A street grid with long blocks. Dashed lines mark possible new cross streets."></svg>
-    <div class="model-out"></div>
     <div class="model-controls"><button type="button" class="model-btn" data-a="long">Long blocks</button><button type="button" class="model-btn" data-a="short">All short blocks</button></div>
     <p class="model-note">The faint lines are six shortest routes picked at random. One grid step is 30 m, so the starting blocks are 240 m long, as on the Upper West Side.</p>`);
-  const svg = el.querySelector("svg"), out = el.querySelector(".model-out");
+  const svg = el.querySelector("svg");
   const W = 24, H = 3, cand = Array.from({ length: W / 2 + 1 }, (_, i) => i * 2);
   const base = [0, 8, 16, 24];
   let open = new Set(base);
@@ -261,9 +253,11 @@ function grid(el) {
       svgEl("circle", { cx: X(x), cy: Y(j), r: 11, fill: token("series-2") }, svg);
       text(svg, X(x), Y(j) + 4, label, { "font-size": 12, "font-weight": 600, fill: token("surface-1"), "text-anchor": "middle" });
     }
-    const streets = open.size;
-    out.innerHTML = `<span><b>${n[`${W},${H}`].toLocaleString("en")}</b> shortest routes from A to B</span>
-      <span><b>${streets * (H + 1)}</b> street corners</span><span><b>${Math.round((W / (streets - 1)) * 30)} m</b> average block length</span>`;
+    const routes = n[`${W},${H}`], first = 20;
+    const block = Math.round((W / (open.size - 1)) * 30);
+    take.innerHTML = routes === first
+      ? `With ${block} m blocks there are <b>${routes}</b> shortest walks, and they all squeeze onto the same few streets. A shop halfway along a block sees few of them.`
+      : `With ${block} m blocks there are <b>${routes.toLocaleString("en")}</b> shortest walks, ${Math.round(routes / first)} times as many. Paths spread over more streets and cross more often, and more corners face passers-by.`;
   }
   draw();
   return draw;
@@ -278,12 +272,12 @@ function quiz(el, { city, data }) {
   const best = ids.reduce((a, id) => (units(id) > units(a) ? id : a), ids[0]);
   const max = units(best);
   let picked = null, revealed = false;
-  frame(el, "Which has the most homes per hectare?", "data", `
-    <p class="model-lede">The same 800 × 800 m in ${ids.length} districts, at the same scale. Pick the densest.</p>
-    <div class="quiz-grid"></div><div class="model-out"></div>
+  const take = frame(el, "Which has the most homes per hectare?", "data",
+    `the same 800 × 800 m of ${ids.length} districts, at the same scale. Guess which one holds the most homes, then click it.`, `
+    <div class="quiz-grid"></div>
     <div class="model-controls"><button type="button" class="model-btn" data-a="reveal">Show all</button><button type="button" class="model-btn" data-a="reset">Try again</button></div>
     <p class="model-note">Values are the median addresses per ha of each district's hexagons, not of the square shown.</p>`);
-  const gridEl = el.querySelector(".quiz-grid"), out = el.querySelector(".model-out");
+  const gridEl = el.querySelector(".quiz-grid"), out = take;
   el.querySelector('[data-a="reveal"]').addEventListener("click", () => { revealed = true; draw(); });
   el.querySelector('[data-a="reset"]').addEventListener("click", () => { revealed = false; picked = null; draw(); });
   function draw() {
@@ -299,7 +293,7 @@ function quiz(el, { city, data }) {
     gridEl.querySelectorAll(".quiz-card").forEach((b) => b.addEventListener("click", () => { picked = b.dataset.id; revealed = true; draw(); }));
     const b = byId[best];
     if (picked === best) out.innerHTML = `<span>Right. ${b.label} has about <b class="sm">${Math.round(max)}</b> addresses per ha.</span>`;
-    else if (picked) out.innerHTML = `<span>${byId[picked].label} has <b class="sm">${Math.round(units(picked))}</b> addresses per ha. The densest is ${b.label}, at ${Math.round(max)}. Tall buildings with open space around them are often less dense than low buildings packed together.</span>`;
+    else if (picked) out.innerHTML = `<span>${byId[picked].label} has <b class="sm">${Math.round(units(picked))}</b> addresses per ha. The densest is ${b.label}, at ${Math.round(max)}. Tall buildings with lawns around them often hold fewer homes than low buildings packed together.</span>`;
     else out.innerHTML = revealed ? `<span>${b.label} is densest, at <b class="sm">${Math.round(max)}</b> addresses per ha.</span>` : "";
   }
   draw();
@@ -313,14 +307,15 @@ function walk(el, { city }) {
   const kinds = [...new Set(v.decay.map((r) => r.kind))].filter((k) => k !== "city");
   const cityLevel = v.decay.find((r) => r.kind === "city")?.places_per_ha;
   let kind = kinds.includes("park") ? "park" : kinds[0];
-  const short = (k) => (v.labels[k] || k).split(/[ ,(]/)[0].replace(/^\w/, (c) => c.toUpperCase());
-  frame(el, "Walk away from the edge", "data", `
+  const short = (k) => (v.labels[k] || k).replace(/^large /i, "").split(/[ ,(]/)[0].replace(/^\w/, (c) => c.toUpperCase());
+  const take = frame(el, "Does life thin out near an edge?", "data",
+    "pick a kind of edge, then move the slider to walk away from it. The line counts shops, cafés and other places on ordinary land around it.", `
     <div class="model-controls">${seg("kind", "Edge of", kinds.map((k) => [k, v.labels[k] ? short(k) : k]), kind)}</div>
     <svg viewBox="0 0 640 210" role="img" aria-label="Line chart of places per hectare by distance from the edge of a border vacuum."></svg>
     <label class="model-ctl-label" for="vac-walk">Your distance from the edge</label>
     <input type="range" id="vac-walk" min="0" max="7" step="1" value="0">
-    <div class="model-out"></div>`);
-  const svg = el.querySelector("svg"), out = el.querySelector(".model-out"), slider = el.querySelector("input");
+    <p class="model-note">Fewer places near an edge is partly fewer homes near it, not only fewer people passing. Step 5 checks this.</p>`);
+  const svg = el.querySelector("svg"), slider = el.querySelector("input");
   segmented(el.querySelector(".seg"), (k) => { kind = k; draw(); });
   slider.addEventListener("input", draw);
   function draw() {
@@ -348,9 +343,56 @@ function walk(el, { city }) {
     for (let m = 0; m <= xMax; m += 100) text(svg, x(m), B + 16, `${m} m`, { "text-anchor": "middle", "font-size": 10 });
     text(svg, L, T - 2, "places per ha", { "font-size": 10 });
     const far = rows[rows.length - 1].places_per_ha;
-    out.innerHTML = `<span><b>${r.band_lo}–${r.band_hi} m</b> from the edge</span><span><b>${r.places_per_ha.toFixed(1)}</b> places per ha</span>
-      ${cityLevel ? `<span><b>${Math.round((r.places_per_ha / cityLevel) * 100)}%</b> of the city-wide level</span>` : ""}
-      <span><b>${Math.round((r.places_per_ha / far) * 100)}%</b> of the level ${rows[rows.length - 1].band_lo}–${xMax} m away</span>`;
+    const share = Math.round((r.places_per_ha / far) * 100);
+    take.innerHTML = `<b>${r.band_lo}–${r.band_hi} m</b> from the edge there are <b>${r.places_per_ha.toFixed(1)}</b> places per ha, ${
+      share < 90 ? `only ${share}% of the level` : share > 110 ? `more than the level` : "about the same as"} ${rows[rows.length - 1].band_lo}–${xMax} m away.`;
+  }
+  draw();
+  return draw;
+}
+
+/* Who can afford to move in? Old buildings are cheap, and only cheap space lets
+   new and marginal businesses start. Rents here are rough tiers, not data. */
+const AGES = { old: { label: "pre-1945", rent: 1 }, mid: { label: "1960s–80s", rent: 2 }, new: { label: "new", rent: 3 } };
+const STREETS = {
+  new: ["new", "new", "new", "new", "new", "new", "new", "new", "new", "new"],
+  two: ["mid", "new", "mid", "mid", "new", "new", "mid", "new", "mid", "new"],
+  many: ["old", "new", "mid", "old", "old", "mid", "new", "old", "mid", "old"],
+};
+const FIRMS = [
+  { label: "Chain store", pays: 3 }, { label: "Bank branch", pays: 3 },
+  { label: "Restaurant", pays: 2 }, { label: "Bookshop", pays: 2 },
+  { label: "Start-up workshop", pays: 1 }, { label: "Artist's studio", pays: 1 },
+];
+
+function rents(el) {
+  let street = "new";
+  const take = frame(el, "Who can afford to move in?", "sketch",
+    "change the ages of the buildings on this street and see which businesses can find a space they can pay for.", `
+    <div class="model-controls">${seg("street", "Buildings", [["new", "All built at once"], ["two", "Two ages"], ["many", "Many ages"]], street)}</div>
+    <svg viewBox="0 0 640 170" role="img" aria-label="A street of ten buildings shaded by age, with the rent level of each."></svg>
+    <div class="firm-row"></div>
+    <p class="model-note">Rents are three rough levels: new buildings are dearest, old ones cheapest. Jacobs: "Old ideas can sometimes use new buildings. New ideas must use old buildings."</p>`);
+  const svg = el.querySelector("svg"), firms = el.querySelector(".firm-row");
+  segmented(el.querySelector(".seg"), (v) => { street = v; draw(); });
+  function draw() {
+    svg.textContent = "";
+    const ages = STREETS[street], w = 58, gap = 4, base = 130;
+    const fill = { old: token("seq-3"), mid: token("seq-5"), new: token("seq-7") };
+    svgEl("line", { x1: 8, x2: 632, y1: base, y2: base, stroke: token("border") }, svg);
+    ages.forEach((a, i) => {
+      const h = a === "new" ? 96 : a === "mid" ? 78 : 62, x = 12 + i * (w + gap);
+      svgEl("rect", { x, y: base - h, width: w, height: h, fill: fill[a], rx: 2 }, svg);
+      text(svg, x + w / 2, base + 16, AGES[a].label, { "text-anchor": "middle", "font-size": 10 });
+      text(svg, x + w / 2, base + 30, "€".repeat(AGES[a].rent), { "text-anchor": "middle", "font-size": 11, fill: token("text-primary") });
+    });
+    const cheapest = Math.min(...ages.map((a) => AGES[a].rent));
+    const fits = FIRMS.filter((f) => f.pays >= cheapest);
+    firms.innerHTML = FIRMS.map((f) => `<span class="firm${f.pays >= cheapest ? " in" : ""}">${f.label}</span>`).join("");
+    take.innerHTML = fits.length === FIRMS.length
+      ? "With old buildings on the street, every kind of business finds a space, including the new and marginal ones that make a district diverse."
+      : `Only <b>${fits.length}</b> of ${FIRMS.length} kinds of business can pay these rents. ${
+        cheapest === 3 ? "A street built all at once has only high-rent space, so it fills with businesses that can afford it." : "Add some older, cheaper buildings to let the rest in."}`;
   }
   draw();
   return draw;
