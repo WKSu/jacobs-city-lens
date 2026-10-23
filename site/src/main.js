@@ -198,7 +198,7 @@ function renderCharts() {
   const total = city.metrics.filter((m) => (m.layer ?? "hex") === "hex").length;
   $("profile-more").textContent = state.profileAll ? "Show key measures only" : `Show all ${total} measures`;
   $("profile-more").setAttribute("aria-expanded", state.profileAll);
-  renderFigureGround($("fg-grid"), city, data.fg);
+  renderFigureGround($("fg-grid"), city, data.fg, data.hex);
   renderDensity($("density-chart"), $("density-intro"), tooltip, city);
   renderVacuums($("vacuum-chart"), $("vacuum-controls"), tooltip, city);
   renderParks($("park-chart"), $("park-controls"), $("park-legend"), tooltip, city, data.parks);
@@ -249,6 +249,7 @@ function watchSections() {
 
 async function init() {
   watchSections();
+  document.querySelectorAll(".belongs [data-tab]").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
   $("profile-more").addEventListener("click", () => {
     state.profileAll = !state.profileAll;
     renderCharts();

@@ -8,16 +8,22 @@ import { CONDITIONS } from "./tests.js";
 // Filled squares first, so each cell also reads as a bar.
 const RANK = { on: 0, "": 1, na: 2 };
 
-export function renderScorecard(el, tooltip, city, hex, onPick) {
+// Each district's hexagons and how many conditions they meet, best first.
+// Shared with the figure-ground plans so both list districts in the same order.
+export function districtRows(city, hex) {
   const byArea = new Map(city.areas.map((a) => [a.id, []]));
   for (const f of hex.features) byArea.get(f.properties.study_area)?.push(f.properties);
-
-  const rows = city.areas.map((a) => {
+  return city.areas.map((a) => {
     const hexes = byArea.get(a.id);
     const scored = hexes.filter((p) => typeof p.conditions_met === "number");
     const mean = scored.reduce((s, p) => s + p.conditions_met, 0) / (scored.length || 1);
-    return { a, hexes, scored, mean, places: a.metrics.places_per_ha?.median };
+    const share = (c) => scored.filter((p) => p[`meets_${c.gen}`]).length / (scored.length || 1);
+    return { a, hexes, scored, mean, share, places: a.metrics.places_per_ha?.median };
   }).filter((r) => r.hexes.length).sort((x, y) => y.mean - x.mean);
+}
+
+export function renderScorecard(el, tooltip, city, hex, onPick) {
+  const rows = districtRows(city, hex);
   if (!rows.length || !rows[0].scored.length) { el.innerHTML = ""; return; }
 
   const maxPlaces = Math.max(...rows.map((r) => r.places ?? 0), 1);
