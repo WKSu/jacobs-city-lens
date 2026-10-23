@@ -31,18 +31,44 @@ def test_rays_cover_both_sides():
     assert np.allclose(r.length, eyes.RAY_M - 2)
 
 
+def addresses(points):
+    return gpd.GeoDataFrame(geometry=points, crs=CRS)
+
+
+NO_ADDRESSES = addresses([])
+
+
 def test_street_wall_and_grain():
     # ten 10 m wide houses along the whole north side, 8 m from the centre line; nothing on the south side
     row = [box(x, 8, x + 10, 18) for x in range(0, 100, 10)]
-    lm = eyes.link_metrics(street(), buildings(row), places([Point(50, 12)]))
+    lm = eyes.link_metrics(street(), buildings(row), places([Point(50, 12)]), NO_ADDRESSES)
     assert np.isclose(lm["frontage_share"].iloc[0], 0.5)
     assert lm["buildings_per_100m"].iloc[0] == 10
     assert lm["places_per_100m"].iloc[0] == 1
 
     # one slab far back from the street does not count
-    slab = eyes.link_metrics(street(), buildings([box(0, 40, 100, 60)]), places([]))
+    slab = eyes.link_metrics(street(), buildings([box(0, 40, 100, 60)]), places([]), NO_ADDRESSES)
     assert slab["frontage_share"].iloc[0] == 0
     assert slab["buildings_per_100m"].iloc[0] == 0
+
+
+def test_doors_count_distinct_locations():
+    # five houses with a door each, plus a block of 40 flats sharing one entrance point
+    houses = [Point(x, 12) for x in range(5, 100, 20)]
+    flats = [Point(50, -15)] * 40
+    far = [Point(50, 80)]  # too far from the street to be its door
+    lm = eyes.link_metrics(street(), buildings([]), places([]), addresses(houses + flats + far))
+    assert lm["doors"].iloc[0] == 6
+    assert lm["doors_per_100m"].iloc[0] == 6
+
+
+def test_shops_do_not_raise_the_eyes_score():
+    two = pd.concat([street(), street()], ignore_index=True)
+    two = two.assign(geometry=[LineString([(0, 0), (100, 0)]), LineString([(0, 500), (100, 500)])])
+    shops = places([Point(x, 505) for x in range(0, 100, 10)])
+    lm = eyes.link_metrics(two, buildings([]), shops, NO_ADDRESSES)
+    assert lm["places_per_100m"].iloc[1] == 10
+    assert lm["eyes_score"].iloc[0] == lm["eyes_score"].iloc[1]
 
 
 def test_vacuum_decay_counts_by_band():
