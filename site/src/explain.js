@@ -3,6 +3,7 @@
 
 import { token } from "./theme.js";
 import { FAMILIES } from "./map.js";
+import { CONDITIONS } from "./tests.js";
 
 const GROUP_LABEL = {
   work: "Work", civic: "Civic and health", shopping: "Shopping", personal_services: "Personal services",
@@ -26,7 +27,19 @@ export function explainHex(el, generator, p, city) {
   el.innerHTML = body ? title + body : "";
 }
 
+const CONDITION_FORMAT = { bag_use_mix: f2, intersection_density: n0, age_diversity: f2, dwellings_per_net_ha: n0 };
+
 const BODIES = {
+  together(p, ha, city) {
+    const th = city.conditionThresholds || {};
+    if (p.conditions_met == null) return `<p>Left out: too little land, or one of the four measures is missing.</p>`;
+    const rows = CONDITIONS.map((c) => {
+      const v = p[c.id], met = v != null && v >= th[c.id];
+      const fmt = CONDITION_FORMAT[c.id];
+      return `<p>${met ? "✓" : "✗"} ${c.label}: <b>${fmt(v)}</b> <span class="explain-muted">(top 40% starts at ${fmt(th[c.id])})</span></p>`;
+    }).join("");
+    return `${rows}<p><b>${p.conditions_met} of 4</b> met.</p>`;
+  },
   mixed_uses(p, ha, city) {
     const groups = city.place_groups || [];
     const counts = groups.map((g) => ({ g, n: Number(p[`n_${g}`] || 0) }));
@@ -44,7 +57,7 @@ const BODIES = {
   },
   short_blocks(p, ha) {
     return `<p><b>${n0(p.intersections)}</b> intersections on <b>${f2(ha / 100)}</b> km² of land = <b>${n0(p.intersection_density)}</b> per km².</p>
-      <p>Half of the streets between two corners here are shorter than <b>${p.median_link_m == null ? "–" : n0(p.median_link_m)} m</b> (Jacobs wanted short ones; Manhattan's long blocks are about 240 m).</p>
+      <p>Half of the streets between two corners here are shorter than <b>${p.median_link_m == null ? "–" : n0(p.median_link_m)} m</b>. Manhattan's long blocks are about 240 m, but in Rotterdam street length says less than the number of corners: streets that loop and end can be short too.</p>
       <p>Counting footpaths too gives <b>${n0(p.path_intersection_density)}</b> intersections per km².</p>`;
   },
   concentration(p, ha) {
@@ -54,7 +67,8 @@ const BODIES = {
   },
   eyes(p) {
     return `<p>Each street gets three measures; the hexagon averages its streets, weighted by length.</p>
-      <p>Street wall <b>${p.frontage_share == null ? "–" : Math.round(p.frontage_share * 100) + "%"}</b>, buildings fronting <b>${f1(p.buildings_per_100m)}</b> and places <b>${f1(p.places_per_100m)}</b> per 100 m of street.</p>
+      <p>Street wall <b>${p.frontage_share == null ? "–" : Math.round(p.frontage_share * 100) + "%"}</b>, buildings fronting <b>${f1(p.buildings_per_100m)}</b>${
+        p.doors_per_100m == null ? "" : `, front doors <b>${f1(p.doors_per_100m)}</b>`} and places <b>${f1(p.places_per_100m)}</b> per 100 m of street.</p>
       <p>Zoom in to see each street's own values.</p>`;
   },
   border_vacuums(p) {

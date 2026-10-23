@@ -4,13 +4,19 @@ import { token } from "./theme.js";
 const MEASURES = {
   places: { key: "places_per_ha", label: "places per ha" },
   addresses: { key: "addresses_per_ha", label: "addresses per ha" },
+  per_address: { key: "places_per_100_addresses", label: "places per 100 addresses" },
 };
+
+// Places per address separates "fewer people near the edge" from "people
+// avoid the edge": only the second is Jacobs' vacuum.
+const withPerAddress = (r) => ({ ...r, places_per_100_addresses:
+  r.addresses_per_ha > 0 && r.places_per_ha != null ? (r.places_per_ha / r.addresses_per_ha) * 100 : null });
 
 // Small multiples: activity in 50 m bands from the edge of each kind of vacuum,
 // against the city-wide level (dashed). A line that climbs left to right is
-// Jacobs' border vacuum.
+// Jacobs' border vacuum only if it climbs per address too.
 export function renderVacuums(el, controlsEl, tooltip, city, measure = "places") {
-  const v = city.vacuums;
+  const v = city.vacuums && { ...city.vacuums, decay: city.vacuums.decay.map(withPerAddress) };
   if (!v) { el.innerHTML = ""; controlsEl.innerHTML = ""; return; }
   controlsEl.innerHTML = Object.entries(MEASURES).map(([id, m]) =>
     `<button class="chip" role="radio" data-v="${id}" aria-checked="${id === measure}">${m.label}</button>`).join("");
