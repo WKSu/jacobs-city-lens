@@ -39,7 +39,9 @@ async function loadCity(id) {
   state.hex = null;
   state.data = { hex, areas, water, fg, links, vacuums, parks, clocks };
   state.tests = computeTests(city, hex);
-  city.conditionThresholds = state.tests.thresholds;
+  // The pipeline's thresholds when the data has them, so the map and the explainer agree.
+  city.conditionThresholds = city.conditions
+    ? Object.fromEntries(city.conditions.conditions.map((c) => [c.metric, c.threshold])) : state.tests.thresholds;
   addTogether(city, hex);
   hexMap.onHexClick = (p) => { state.hex = p; explainHex($("explain"), state.generator, p, city); };
   await hexMap.load(city, state.data);

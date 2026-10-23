@@ -65,8 +65,8 @@ export const STORIES = {
     model: "eyes",
     lead: "frontage_share",
     fit: "proxy",
-    measure: "The data sees building fronts: how much of each street is lined by buildings, and how many buildings and places face it. It can't see windows that are used, people who are there, or whether the street is safe.",
-    counts: "The map opens on the street wall, the share of each street lined by buildings. The combined eyes score ranks streets almost exactly as the street wall alone does, so it adds little. Zoom in and each street gets its own values.",
+    measure: "The data sees building fronts: how much of each street is lined by buildings, how many buildings face it, and how many front doors (address locations) open onto it. It can't see windows that are used, people who are there, or whether the street is safe.",
+    counts: "The map opens on the street wall, the share of each street lined by buildings. The eyes score averages street wall, buildings and front doors; shops are shown separately, because whether they make a street safer is disputed. The score ranks neighbourhoods much like each of its parts does, so the simplest one comes first. Zoom in and each street gets its own values.",
     honest: "The data sees building footprints and places, not windows or doors that are actually used. Offices close at six.",
   },
   border_vacuums: {

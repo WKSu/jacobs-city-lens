@@ -191,7 +191,7 @@ export const TESTS = {
     run() {
       return {
         result: "untestable",
-        finding: "The map can measure how much of each street is lined by buildings, and how many buildings and places face it. It can't measure safety: there are no crime or safety figures in this data yet.",
+        finding: "The map can measure how much of each street is lined by buildings, and how many buildings, front doors and places face it. It can't measure safety: there are no crime or safety figures in this data yet.",
         jacobs: "Jacobs' claim is about people watching the street without meaning to. The data sees building fronts, not windows that are actually used or people who are actually there.",
         disclaimer: "Research since Jacobs is divided. Some studies find more shops and cafés go with more crime on quiet streets, and less on busy, dense ones. A comparison with Rotterdam's neighbourhood safety survey (Wijkprofiel) is planned, and even then it would show where safety and street fronts go together, not that one causes the other.",
       };

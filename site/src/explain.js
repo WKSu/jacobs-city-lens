@@ -66,7 +66,7 @@ const BODIES = {
       <p>Buildings cover <b>${p.coverage == null ? "–" : Math.round(p.coverage * 100)}%</b> of the land.</p>`;
   },
   eyes(p) {
-    return `<p>Each street gets three measures; the hexagon averages its streets, weighted by length.</p>
+    return `<p>Each street gets its own measures; the hexagon averages its streets, weighted by length. The eyes score combines street wall, buildings and front doors; places are shown but left out of it.</p>
       <p>Street wall <b>${p.frontage_share == null ? "–" : Math.round(p.frontage_share * 100) + "%"}</b>, buildings fronting <b>${f1(p.buildings_per_100m)}</b>${
         p.doors_per_100m == null ? "" : `, front doors <b>${f1(p.doors_per_100m)}</b>`} and places <b>${f1(p.places_per_100m)}</b> per 100 m of street.</p>
       <p>Zoom in to see each street's own values.</p>`;
