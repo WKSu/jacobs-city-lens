@@ -76,9 +76,11 @@ METRICS = [
      "source": "Overture buildings (OSM)"},
     {"id": "eyes_score", "generator": "eyes", "label": "Eyes score", "unit": "0–1",
      "direction": "higher", "format": ".2f", "links": True,
-     "description": "Average of the three street measures below, each as a percentile among the city's "
-                    "streets. A summary for the map, not a finding on its own. Zoom in to see single streets.",
-     "source": "Overture buildings, places and transportation"},
+     "description": "Average of street wall, buildings fronting the street and front doors, each as a "
+                    "percentile among the city's streets. Shops are left out: they belong to mixed use, "
+                    "and the evidence that they make streets safer is mixed. A summary for the map, not "
+                    "a finding on its own. Zoom in to see single streets.",
+     "source": "Overture buildings, addresses and transportation"},
     {"id": "frontage_share", "generator": "eyes", "label": "Street wall", "unit": "share",
      "direction": "higher", "format": ".0%", "links": True,
      "description": "Share of street length, both sides, with a building within 20 m of the street's "
@@ -89,9 +91,18 @@ METRICS = [
      "description": "Distinct buildings facing the street per 100 m, both sides: the grain of doors and "
                     "windows. A row of narrow houses scores high, one slab in a lawn scores low.",
      "source": "Overture buildings (OSM) + transportation"},
+    {"id": "doors_per_100m", "generator": "eyes", "label": "Front doors along the street",
+     "unit": "per 100 m", "direction": "higher", "format": ".1f", "links": True,
+     "description": "Distinct address locations within 30 m of the street per 100 m, both sides: a "
+                    "stand-in for front doors. Flats behind one entrance often share a location, so a "
+                    "tower counts for little and a row of houses for a lot. Studies of burglary find "
+                    "doors and windows facing the street go with less crime.",
+     "source": "Overture addresses (BAG) + transportation"},
     {"id": "places_per_100m", "generator": "eyes", "label": "Places along the street",
      "unit": "per 100 m", "direction": "higher", "format": ".1f", "links": True,
-     "description": "Open shops, cafés, offices and other places within 30 m of the street, per 100 m.",
+     "description": "Open shops, cafés, offices and other places within 30 m of the street, per 100 m. "
+                    "Not part of the eyes score: shops give people a reason to watch, but they also "
+                    "draw strangers, and street crime often rises with them where density is low.",
      "source": "Overture places + transportation"},
     {"id": "vacuum_share", "generator": "border_vacuums", "label": "Land in border vacuums",
      "unit": "share", "direction": "lower", "format": ".0%",

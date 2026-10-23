@@ -29,6 +29,7 @@ import pandas as pd
 import shapely
 
 from jacobs.config import ROOT, City, list_cities
+from jacobs.metrics import conditions
 from jacobs.metrics.mixed_use import GROUP_NAMES, clean_places
 from jacobs.metrics.registry import (
     GENERATORS,
@@ -201,12 +202,15 @@ def run(city: City) -> None:
     out.mkdir(parents=True, exist_ok=True)
     hexes = gpd.read_parquet(city.processed_dir / "hex.parquet")
     areas = gpd.read_parquet(city.processed_dir / "areas.parquet")
+    cond, cond_summary = conditions.compute(hexes)
+    hexes = hexes.join(cond)
 
     metrics_list = available_metrics(hexes)
     metric_ids = [m["id"] for m in metrics_list]
     # Street and park metrics live on their own layers, so they are always sent;
     # the hexagon metrics are only those this city has.
-    published = {*metric_ids, *LINK_METRIC_IDS, *PARK_METRIC_IDS}
+    link_columns = pd.read_parquet(city.processed_dir / "eyes_links.parquet").columns
+    published = {*metric_ids, *(m for m in LINK_METRIC_IDS if m in link_columns), *PARK_METRIC_IDS}
     site_metrics = [m for m in METRICS if m["id"] in published]
     # A generator or chapter with nothing to show would be an empty tab.
     measured = {m["generator"] for m in site_metrics}
@@ -215,7 +219,7 @@ def run(city: City) -> None:
     # Raw counts behind each hexagon's numbers, so the site can show how they are made.
     counts = ["units", "places", "intersections", *(f"n_{g}" for g in GROUP_NAMES)]
     local_counts = [c for c in ["dwellings", "cbs_population"] if c in hexes.columns]
-    keep = ["h3", "land_ha", "study_area", *counts, *local_counts, *metric_ids]
+    keep = ["h3", "land_ha", "study_area", *counts, *local_counts, *metric_ids, *cond.columns]
     web = hexes[keep + ["geometry"]].copy()
     web[counts] = web[counts].fillna(0).astype(int)
     for col in metric_ids + ["land_ha"]:
@@ -237,9 +241,11 @@ def run(city: City) -> None:
     # length_m only between two intersections: Jacobs' block length (dead ends get none)
     links = links.assign(geometry=links.geometry.simplify(1),
                          length_m=links["length"].round(0).where(links["ends"] == "intersection-intersection"))
-    for col in LINK_METRIC_IDS:
+    # a street measure added since the last pipeline run is left out until the next one
+    link_ids = [m for m in LINK_METRIC_IDS if m in links.columns]
+    for col in link_ids:
         links[col] = links[col].round(3)
-    _write_geojson(links[[*LINK_METRIC_IDS, "length_m", "geometry"]], out / "links.geojson")
+    _write_geojson(links[[*link_ids, "length_m", "geometry"]], out / "links.geojson")
 
     vac = gpd.read_parquet(city.processed_dir / "vacuums.parquet")
     vac = vac.assign(geometry=vac.geometry.simplify(5), area_ha=vac["area_ha"].round(1))
@@ -268,6 +274,7 @@ def run(city: City) -> None:
         "story": city.story,
         "place_groups": GROUP_NAMES,
         "metrics": site_metrics,
+        "conditions": cond_summary,
         "areas": area_profiles(hexes, areas, metrics_list),
         "city_median": {m: _round(hexes[m].median()) for m in metric_ids},
         "distributions": {
@@ -275,7 +282,7 @@ def run(city: City) -> None:
             **{m: [_round(v) for v in parks[m].dropna().sort_values()] for m in PARK_METRIC_IDS},
         },
         "link_distributions": {m: [_round(v, 3) for v in links[m].dropna().sort_values()[::5]]
-                               for m in LINK_METRIC_IDS},
+                               for m in link_ids},
         "vacuums": {
             "labels": VACUUM_LABELS,
             "area_ha": {k: _round(v, 0) for k, v in vac.groupby("kind")["area_ha"].sum().items()},
