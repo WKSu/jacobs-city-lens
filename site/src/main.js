@@ -5,7 +5,6 @@ import { renderDensity } from "./density.js";
 import { renderVacuums } from "./vacuums.js";
 import { renderParks } from "./parks.js";
 import { renderClocks } from "./clocks.js";
-import { onThemeChange } from "./theme.js";
 import { STORIES, FIT_LABEL } from "./stories.js";
 import { computeTests, renderTest } from "./tests.js";
 import { renderChain } from "./chain.js";
@@ -17,7 +16,7 @@ const base = import.meta.env.BASE_URL;
 const $ = (id) => document.getElementById(id);
 const tooltip = $("tooltip");
 const hexMap = new HexMap($("map"), tooltip);
-const state = { generator: "short_blocks", metric: null, city: null, data: null, hex: null, redrawModel: null, profileAll: false };
+const state = { generator: "short_blocks", metric: null, city: null, data: null, hex: null, profileAll: false };
 const smooth = () => (matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth");
 
 async function getJSON(path) {
@@ -131,7 +130,7 @@ function renderStory(g) {
   $("test-city").textContent = city.name;
   renderTest($("story-test"), tooltip, g.id, state.tests, city);
   $("story-test-block").hidden = $("story-test").hidden;
-  state.redrawModel = renderModel(story.model, $("story-model"), { city, data });
+  renderModel(story.model, $("story-model"), { city, data });
   $("story-model-col").hidden = $("story-model").hidden;
   $("story").classList.toggle("no-model", $("story-model").hidden);
   let n = 0;
@@ -265,7 +264,6 @@ async function init() {
   await loadCity(first);
   let t;
   window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(renderCharts, 150); });
-  onThemeChange(() => { renderCharts(); state.redrawModel?.(); });
 }
 
 init().catch((err) => {
