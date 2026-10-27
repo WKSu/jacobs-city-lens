@@ -144,15 +144,40 @@ function renderTabs() {
   const { city } = state;
   const fit = (g) => (STORIES[g.id]?.fit ? `<span class="fit fit-${STORIES[g.id].fit}" title="${FIT_LABEL[STORIES[g.id].fit]}"></span>` : "");
   const tab = (g) =>
-    `<button class="tab${g.status ? " pending" : ""}" role="tab" data-g="${g.id}" aria-selected="${g.id === state.generator}">
-      ${fit(g)}${g.label}<span class="chapter">ch. ${g.chapter}</span></button>`;
+    `<button class="tab${g.status ? " pending" : ""}" role="tab" data-g="${g.id}" aria-selected="${g.id === state.generator}" title="Chapter ${g.chapter}">
+      ${fit(g)}${g.label}</button>`;
   const generators = city.generators.filter((g) => g.kind !== "chapter");
   const chapters = city.generators.filter((g) => g.kind === "chapter");
   $("generator-tabs").innerHTML = `<span class="tab-group">Conditions</span>${generators.map(tab).join("")}` +
     (chapters.length ? `<span class="tab-divider" aria-hidden="true"></span><span class="tab-group">Also in the book</span>${chapters.map(tab).join("")}` : "");
   $("generator-tabs").querySelectorAll(".tab").forEach((b) =>
-    b.addEventListener("click", () => selectGenerator(b.dataset.g)));
+    b.addEventListener("click", () => switchTab(b.dataset.g)));
   selectGenerator(state.generator);
+}
+
+// The tab bar sticks to the top of the section, so a tab can be switched from anywhere in it.
+// If the map is on screen, the reader stays at the map while the story above it changes
+// length; otherwise the reader goes to the start of the new story.
+function switchTab(id) {
+  const map = $("map").getBoundingClientRect();
+  const mapInView = map.bottom > stickyBottom() && map.top < innerHeight;
+  selectGenerator(id);
+  if (mapInView) {
+    // the measure buttons land just below the tab bar, with the map under them
+    window.scrollBy(0, $("metric-buttons").getBoundingClientRect().top - stickyBottom() - 12);
+    return;
+  }
+  const story = $("story").getBoundingClientRect().top - stickyBottom() - 16;
+  if (story < 0) window.scrollBy({ top: story, behavior: smooth() });
+}
+
+const stickyBottom = () => $("generator-tabs").getBoundingClientRect().bottom;
+
+// The sticky offsets in style.css follow the real height of the bars.
+function measureBars() {
+  const root = document.documentElement.style;
+  root.setProperty("--nav-h", `${document.querySelector(".section-nav").offsetHeight}px`);
+  root.setProperty("--tabs-h", `${$("generator-tabs").offsetHeight}px`);
 }
 
 function selectGenerator(id) {
@@ -161,7 +186,8 @@ function selectGenerator(id) {
   const g = city.generators.find((x) => x.id === id);
   $("generator-tabs").querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", b.dataset.g === id));
   const sel = $("generator-tabs").querySelector('[aria-selected="true"]');
-  if (sel) $("generator-tabs").scrollLeft = sel.offsetLeft - 16;
+  // centre the chosen tab, so its neighbours show on both sides when the bar scrolls
+  if (sel) $("generator-tabs").scrollLeft = sel.offsetLeft - ($("generator-tabs").clientWidth - sel.offsetWidth) / 2;
   $("generator-summary").textContent = g.summary;
   renderStory(g);
   explainHex($("explain"), id, state.hex, city);
@@ -262,8 +288,9 @@ async function init() {
     loadCity(e.target.value);
   });
   await loadCity(first);
+  measureBars();
   let t;
-  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(renderCharts, 150); });
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { measureBars(); renderCharts(); }, 150); });
 }
 
 init().catch((err) => {

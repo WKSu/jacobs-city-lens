@@ -94,17 +94,34 @@ section > h2, section > .section-intro, section > .belongs, section > .sub-h, se
 section > .story-counts, .method, .closer-intro { max-width: var(--prose); margin-left: auto; margin-right: auto; }
 .section-intro, .generator-summary { max-width: var(--prose); font-family: var(--serif); font-size: 1.15rem; line-height: 1.65; color: var(--text-primary); margin: 0 0 20px; }
 
-.tabs { position: relative; display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--text-primary); margin: 32px 0 28px; }
+/* The tab bar sticks under the section nav for the whole "Each idea" section, so the
+   reader can switch ideas from the map without scrolling back up. On a phone it is one
+   row that scrolls sideways. */
+.tabs {
+  position: sticky; top: var(--nav-h, 42px); z-index: 15; display: flex; gap: 0 2px; flex-wrap: wrap;
+  background: var(--surface-0); border-bottom: 1px solid var(--text-primary); margin: 32px 0 28px;
+}
+/* wide screens: the conditions on one row, the other chapters on the next */
+@media (min-width: 721px) {
+  .tabs .tab-divider { flex-basis: 100%; height: 0; margin: 0; }
+  .tabs .tab-group { min-width: 9.5em; }
+}
+@media (max-width: 720px) {
+  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  /* the map's measures in one sideways row too, so the map stays near the tabs */
+  #metric-buttons { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: -16px; padding-right: 16px; }
+  #metric-buttons .chip { flex: none; white-space: nowrap; }
+}
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
-  background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer;
-  color: var(--text-secondary); margin-bottom: -1px;
+  flex: none; background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 9px 6px; cursor: pointer;
+  color: var(--text-secondary); font-size: 0.9rem; white-space: nowrap;
 }
 .tab { display: inline-flex; align-items: center; border-radius: 3px 3px 0 0; }
 .tab:hover { color: var(--text-primary); background: var(--surface-2); }
-.tab[aria-selected="true"] { color: var(--text-primary); border-bottom: 4px solid var(--accent); font-weight: 700; }
+.tab[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--accent); font-weight: 700; }
 .tab .fit { width: 9px; height: 9px; margin-right: 6px; }
-.tab-group { align-self: center; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600; padding: 0 6px 0 2px; }
-.tab .chapter { color: var(--text-muted); font-size: 0.8rem; margin-left: 4px; }
+.tab-group { flex: none; align-self: center; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); font-weight: 600; padding: 0 6px 0 2px; white-space: nowrap; }
 .tab.pending { opacity: 0.6; }
 
 .metric-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -131,7 +148,7 @@ section > .story-counts, .method, .closer-intro { max-width: var(--prose); margi
 .legend-empty { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.75rem; margin-top: 6px; }
 .legend-empty i { width: 12px; height: 12px; border-radius: 3px; background: var(--hex-empty); display: inline-block; }
 .legend-empty i.dashed { background: none; border: 1px dashed var(--text-primary); border-radius: 0; }
-.tab-divider { width: 1px; align-self: stretch; margin: 6px 8px; background: var(--border); }
+.tab-divider { flex: none; width: 1px; align-self: stretch; margin: 6px 8px; background: var(--border); }
 
 .sm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 32px 28px; }
 .sm-card { margin: 0; padding: 10px 0 0; border-top: 1px solid var(--text-primary); }
@@ -219,8 +236,6 @@ section > .story-counts, .method, .closer-intro { max-width: var(--prose); margi
   .scorecard { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .sc-head:not(.sc-keep) { display: none; }
   .sc-cell.sc-cond::before, .sc-cell.sc-out::before { content: attr(data-label); font-size: 0.7rem; color: var(--text-muted); }
-  .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
-  .tab, .tab-group { flex: none; }
   .sc-cell.sc-name { grid-column: 1 / -1; border-bottom: 0; padding-bottom: 0; }
   .sc-cell.sc-out { grid-column: 1 / -1; }
 }
@@ -401,7 +416,7 @@ h3.step.explore { margin-top: 24px; }
 
 /* Wide screens: the "How it works" model stays in view while the story beside it scrolls */
 @media (min-width: 961px) {
-  .story-model-col { position: sticky; top: 64px; }
+  .story-model-col { position: sticky; top: calc(var(--nav-h, 42px) + var(--tabs-h, 44px) + 20px); }
 }
 @media (max-width: 720px) {
   section { padding-top: 64px; }
