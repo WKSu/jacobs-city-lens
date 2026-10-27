@@ -1,4 +1,4 @@
-// Read design tokens from CSS so charts and the map follow light/dark mode.
+// Read design tokens from CSS so charts and the map use the same palette.
 export function token(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(`--${name}`).trim();
 }
@@ -13,7 +13,3 @@ export function roleColor(role) {
 
 export const ROLE_LABEL = { jacobs: "Old, Jacobs-style district", planned: "Planned district" };
 
-export function onThemeChange(fn) {
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", fn);
-  new MutationObserver(fn).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-}

@@ -1,6 +1,6 @@
 import maplibregl from "maplibre-gl";
 import { quantile } from "d3";
-import { sequential, token, onThemeChange } from "./theme.js";
+import { sequential, token } from "./theme.js";
 import { formatter, withUnit } from "./format.js";
 
 // Streets replace hexagons from this zoom when the metric has a street-level version.
@@ -34,7 +34,6 @@ export class HexMap {
     this.markers = [];
     this.ground = {};
     this.onHexClick = null;
-    onThemeChange(() => this.restyle());
   }
 
   // Point layers (places, addresses, intersections) arrive later than the map; see main.js.
@@ -210,21 +209,6 @@ export class HexMap {
     if (this.map.getZoom() < LINK_ZOOM) return "hex";
     if (this.metric?.links) return "links";
     return this.groundOn ? "ground" : "hex";
-  }
-
-  restyle() {
-    if (!this.map) return;
-    this.map.setPaintProperty("land", "background-color", token("land"));
-    this.map.setPaintProperty("water", "fill-color", token("water"));
-    this.map.setPaintProperty("areas", "line-color", token("text-primary"));
-    this.map.setPaintProperty("vacuums", "line-color", token("text-primary"));
-    this.map.setPaintProperty("parks", "fill-outline-color", token("text-muted"));
-    this.map.setPaintProperty("places", "circle-color", familyColor());
-    this.map.setPaintProperty("places", "circle-stroke-color", token("surface-1"));
-    this.map.setPaintProperty("addresses", "circle-color", token("text-muted"));
-    this.map.setPaintProperty("intersections", "circle-color", token("text-primary"));
-    this.map.setPaintProperty("hex-line", "line-color", hexLineColor());
-    if (this.metric) this.setMetric(this.metric, this.generatorMetrics);
   }
 
   hover(e) {
