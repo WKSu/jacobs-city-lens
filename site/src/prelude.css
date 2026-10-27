@@ -1,0 +1,27 @@
+/* Prelude: why cities are worth it (Death and Life, part one). Kept in its own
+   file so the essay opening can change without touching the rest of the layout. */
+.prelude { padding-top: 72px; }
+.prelude-kicker { max-width: var(--prose); margin: 0 auto 12px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--brand); }
+
+.prelude-quote { max-width: 820px; margin: 48px auto; padding: 0 16px; text-align: center; }
+.prelude-quote blockquote { margin: 0; font-family: var(--serif); font-style: italic; font-size: clamp(1.35rem, 3vw, 1.85rem); line-height: 1.4; color: var(--text-primary); text-wrap: balance; }
+.prelude-quote blockquote::before { content: "\201C"; display: block; font-style: normal; font-size: 3.5rem; line-height: 0.8; color: var(--brand); margin-bottom: 8px; }
+.prelude-quote figcaption { margin-top: 14px; font-size: 0.8rem; color: var(--text-muted); letter-spacing: 0.04em; }
+
+.prelude-list { list-style: none; counter-reset: gift; max-width: 960px; margin: 48px auto 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 56px; }
+.prelude-list li { counter-increment: gift; padding-top: 14px; border-top: 1px solid var(--text-primary); }
+.prelude-list li:last-child:nth-child(odd) { grid-column: 1 / -1; max-width: calc(50% - 28px); justify-self: center; }
+.prelude-list h3 { margin: 0 0 10px; font-family: var(--font); font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; }
+.prelude-list h3::before { content: counter(gift); display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; margin-right: 10px; border-radius: 50%; background: var(--brand); color: var(--brand-ink); font-size: 0.8rem; font-weight: 700; vertical-align: 0.15em; }
+.prelude-list p { margin: 0 0 14px; font-family: var(--serif); font-size: 1.05rem; line-height: 1.6; color: var(--text-primary); }
+.prelude-list q { display: block; padding-left: 12px; border-left: 3px solid var(--brand-soft); font-family: var(--serif); font-style: italic; font-size: 1rem; line-height: 1.5; color: var(--text-secondary); quotes: "\201C" "\201D"; }
+.prelude-ch { display: block; margin-top: 6px; padding-left: 15px; font-size: 0.75rem; color: var(--text-muted); }
+
+.prelude-bridge { max-width: var(--prose); margin: 64px auto 0; font-family: var(--serif); font-size: 1.15rem; line-height: 1.65; color: var(--text-primary); }
+.prelude-bridge b { font-weight: 600; }
+.prelude-bridge a { color: var(--brand); font-weight: 600; }
+
+@media (max-width: 720px) {
+  .prelude-list { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .prelude-list li:last-child:nth-child(odd) { max-width: none; }
+}
